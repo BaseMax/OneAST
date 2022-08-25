@@ -73,20 +73,6 @@ class Location {
         this.offset = offset;
         this.line = line;
     }
-
-    set(index: number, offset: number, line: number) {
-        this.index = index;
-        this.offset = offset;
-        this.line = line;
-    }
-
-    // get(): object {
-    //     return {
-    //         index: this.index,
-    //         offset: this.offset,
-    //         line: this.line,
-    //     };
-    // }
 }
 
 class Lexer {
@@ -104,16 +90,12 @@ class Lexer {
     }
 
     tokenize() {
-        console.log("Initial location:", this.getLocation());
         while (!this.isEOF()) {
-            this.location.start_location.set(this.location.end_location.index, this.location.end_location.offset, this.location.end_location.line);
-            console.log("Current location:", this.getLocation());
+            this.location.start_location = new Location(this.location.end_location.index, this.location.end_location.offset, this.location.end_location.line);
             const token = this.nextToken();
-            console.log(token);
-            // this.tokens.push(token);
+            this.tokens.push(token);
         }
         this.location.start_location = new Location(0, 0, 1);
-        console.log("Final location:", this.getLocation());
     }
 
     nextIndex(n: number) {
@@ -126,7 +108,6 @@ class Lexer {
     }
 
     createToken(kind: TokenType, value?: any) {
-        console.log(`Create ${kind} token`, this.getLocation());
         return new Token(kind, this.getLocation(), value);
     }
 
