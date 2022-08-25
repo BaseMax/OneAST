@@ -29,13 +29,32 @@ class Input {
 }
 
 enum TokenType {
-    T_ERROR=-1,
-    T_EOF=0,
+    T_ERROR = -1,
+    T_EOF = 0,
 
     T_WHITESPACE = 1,
     T_IDENTIFIER = 2,
+
     T_NUMBER = 3,
     T_SEMICOLON = 4,
+    T_COMMA = 5,
+
+    T_PARENTHESIS_OPEN = 6,
+    T_PARENTHESIS_CLOSE = 7,
+
+    T_OPERATOR_PLUS = 8,
+    T_OPERATOR_MINUS = 9,
+    T_OPERATOR_MULTIPLY = 10,
+    T_OPERATOR_DIVIDE = 11,
+    T_OPERATOR_EQUAL = 12,
+
+    T_ECHO,
+    T_IF,
+    T_ELSE,
+    T_FOR,
+    T_DO,
+    T_WHILE,
+    T_RETURN,
 }
 
 class Token {
@@ -83,6 +102,15 @@ class Location {
 class Lexer {
     input: Input;
     tokens: Token[] = [];
+    reservedWords: Record<string, TokenType> = {
+        "if": TokenType.T_IF,
+        "else": TokenType.T_ELSE,
+        "for": TokenType.T_FOR,
+        "do": TokenType.T_DO,
+        "while": TokenType.T_WHILE,
+        "return": TokenType.T_RETURN,
+        "echo": TokenType.T_ECHO,
+    };
 
     location: LocationInfo = new LocationInfo();
 
@@ -129,6 +157,38 @@ class Lexer {
             this.nextIndex(1);
             return this.createToken(TokenType.T_SEMICOLON);
         }
+        if (c === "+") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_OPERATOR_PLUS);
+        }
+        if (c === "-") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_OPERATOR_MINUS);
+        }
+        if (c === "*") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_OPERATOR_MULTIPLY);
+        }
+        if (c === "/") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_OPERATOR_DIVIDE);
+        }
+        if (c === "(") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_PARENTHESIS_OPEN);
+        }
+        if (c === ")") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_PARENTHESIS_CLOSE);
+        }
+        if (c === "=") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_OPERATOR_EQUAL);
+        }
+        if (c === ",") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_COMMA);
+        }
         if (this.isDigit(c)) {
             return this.readNumber();
         }
@@ -167,6 +227,9 @@ class Lexer {
             c = this.nextChar();
         }
 
+        if (this.reservedWords[identifier]) {
+            return this.createToken(this.reservedWords[identifier]);
+        }
         return this.createToken(TokenType.T_IDENTIFIER, identifier);
     }
 
@@ -205,7 +268,7 @@ class Lexer {
             if (has_line === false && c === "\n") has_line = true;
             c = this.nextChar();
         }
-        
+
         return this.createToken(TokenType.T_WHITESPACE, {
             has_tab: has_tab,
             has_line: has_line
@@ -232,7 +295,7 @@ function main(): void
     let input: Input = new Input();
     // const source_code = "echo             1234567890";
     // const source_code = "abc def ghi";
-    const source_code = "abc                6\ndef8ghi";
+    const source_code = "age = 50;echo age;";
     input.setData(source_code);
     console.log(input);
 
