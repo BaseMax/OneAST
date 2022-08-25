@@ -73,6 +73,20 @@ class Location {
         this.offset = offset;
         this.line = line;
     }
+
+    set(index: number, offset: number, line: number) {
+        this.index = index;
+        this.offset = offset;
+        this.line = line;
+    }
+
+    // get(): object {
+    //     return {
+    //         index: this.index,
+    //         offset: this.offset,
+    //         line: this.line,
+    //     };
+    // }
 }
 
 class Lexer {
@@ -92,13 +106,14 @@ class Lexer {
     tokenize() {
         console.log("Initial location:", this.getLocation());
         while (!this.isEOF()) {
-            const start_location = this.location.end_location;
+            this.location.start_location.set(this.location.end_location.index, this.location.end_location.offset, this.location.end_location.line);
+            console.log("Current location:", this.getLocation());
             const token = this.nextToken();
-
-            this.tokens.push(token);
-            token.location.start_location = start_location;
+            console.log(token);
+            // this.tokens.push(token);
         }
         this.location.start_location = new Location(0, 0, 1);
+        console.log("Final location:", this.getLocation());
     }
 
     nextIndex(n: number) {
@@ -111,6 +126,7 @@ class Lexer {
     }
 
     createToken(kind: TokenType, value?: any) {
+        console.log(`Create ${kind} token`, this.getLocation());
         return new Token(kind, this.getLocation(), value);
     }
 
@@ -149,8 +165,6 @@ class Lexer {
         let number = "";
         let c = this.getChar();
 
-        console.log(this.getLocation());
-        
         while (c !== null && this.isDigit(c)) {
             number += c;
             c = this.nextChar();
@@ -206,7 +220,7 @@ function main(): void {
     // let input: Input = new Input("one.ts", ".");
     // input.readFile();
     let input: Input = new Input();
-    const source_code = "echo 110;";
+    const source_code = "echo 10";
     input.setData(source_code);
     console.log(input);
 
