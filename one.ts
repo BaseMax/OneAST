@@ -38,10 +38,12 @@ enum TokenType {
 }
 
 class Token {
-    kind: TokenType;
+    kind: string;
+    value: any;
 
-    constructor(kind: TokenType) {
-        this.kind = kind;
+    constructor(kind: TokenType, value?: any) {
+        this.kind = TokenType[kind];
+        this.value = value;
     }
 
     print(): string {
@@ -49,19 +51,30 @@ class Token {
     }
 }
 
+class Location {
+    index: number = 0;
+    offset: number = 0;
+    line: number = 1;
+
+    constructor(index: number, offset: number, line: number) {
+        this.index = index;
+        this.offset = offset;
+        this.line = line;
+    }
+}
+
 class Lexer {
     input: Input;
     tokens: Token[] = [];
 
-    index: number = 0;
-    offset: number = 0;
-    line: number = 1;
+    location: Location = new Location(0, 0, 1);
 
     constructor(input: Input) {
         this.input = input;
         if (!this.input.data) {
             throw new Error("No input data");
         }
+        this.tokenize();
     }
 
     tokenize() {
@@ -70,29 +83,94 @@ class Lexer {
         }
     }
 
+    nextIndex(n: number) {
+        this.location.index += n;
+        this.location.offset += n;
+    }
+
     nextToken(): Token {
-        let c = this.input.data[this.index];
-        let token: Token;
-        if (c === " " || c === "\t" || c === "\n" || c === "\r") {
-            this.index++;
-            return this.nextToken();
-        } else if (c === ";") {
-            token = new Token(TokenType.T_SEMICOLON);
-            this.index++;
-        } else if (c === ".") {
-            token = new Token(TokenType.T_IDENTIFIER);
-            this.index++;
-        } else if (c === "0" || c === "1" || c === "2" || c === "3" || c === "4" || c === "5" || c === "6" || c === "7" || c === "8" || c === "9") {
-            token = new Token(TokenType.T_NUMBER);
-            this.index++;
-        } else {
-            throw new Error(`Unexpected character ${c}`);
+        let c = this.getChar();
+        console.log("nextToken: loop", c);
+
+        if (c === null) {
+            return new Token(TokenType.T_EOF);
         }
-        return token;
+        if (c === " " || c === "\t" || c === "\n" || c === "\r") {
+            this.skipWhitespace();
+            return this.nextToken();
+        }
+        if (c === ";") {
+            this.nextIndex(1);
+            return new Token(TokenType.T_SEMICOLON);
+        }
+        if (this.isDigit(c)) {
+            return this.readNumber();
+        }
+        if (this.isAlpha(c)) {
+            return this.readIdentifier();
+        }
+        return new Token(TokenType.T_ERROR, `Unexpected character ${c}`);
+    }
+
+    isDigit(c: string): boolean {
+        return c >= "0" && c <= "9";
+    }
+    
+    isAlpha(c: string): boolean {
+        return c >= "a" && c <= "z" || c >= "A" && c <= "Z" || c === "_";
+    }
+
+    readNumber() : Token {
+        let number = "";
+        let c = this.getChar();
+        
+        while (c !== null && this.isDigit(c)) {
+            console.log("readNumber / loop", c);
+            number += c;
+            c = this.nextChar();
+        }
+
+        return new Token(TokenType.T_NUMBER, number);
+    }
+
+    readIdentifier() : Token {
+        let c = this.getChar();
+        let identifier = "";
+
+        while (c !== null && this.isAlpha(c)) {
+            console.log("readIdentifier / loop", c);
+            identifier += c;
+            c = this.nextChar();
+        }
+
+        return new Token(TokenType.T_IDENTIFIER, identifier);
+    }
+
+    getChar(): string | null {
+        if (this.location.index >= this.input.data.length) {
+            return null;
+        }
+        return this.input.data[this.location.index];
+    }
+
+    nextChar(): string | null {
+        this.location.index++;
+        this.location.offset++;
+        return this.getChar();
+    }
+
+    skipWhitespace() {
+        let c = this.getChar();
+        while (c === " " || c === "\t" || c === "\n" || c === "\r") {
+            if (c === "\n") {
+                this.location.line++;
+            }
+            c = this.nextChar();
+        }
     }
 
     isEOF(): boolean {
-        return this.index >= this.input.data.length;
+        return this.location.index >= this.input.data.length;
     }
 }
 
