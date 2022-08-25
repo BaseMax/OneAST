@@ -292,6 +292,31 @@ class AstStatement implements Ast {
     kind: string = "Statement";
 }
 
+class AstEcho implements Ast {
+    kind: string = "Echo";
+}
+
+class AstExpression implements Ast {
+    kind: string = "Expression";
+    expression: Ast;
+
+    constructor(expr: Ast) {
+        this.expression = expr;
+    }
+}
+
+class AstAssignmentExpression implements Ast {
+    kind: string = "AssignmentExpression";
+}
+
+class AstCallExpression implements Ast {
+    kind: string = "CallExpression";
+}
+
+class AstLiteralExpression implements Ast {
+    kind: string = "LiteralExpression";
+}
+
 class AstProgram implements Ast {
     kind: string = "Program";
     body: AstStatement[];
@@ -321,17 +346,13 @@ class Parser {
     parse() {
         let statements: AstStatement[] = [];
         while (!this.isEOF()) {
-            this.parseStatement();
+            const ast: Ast|null = this.parseStatement();
+            if (ast !== null) statements.push(ast);
         }
         return new AstProgram(statements, this.location);
     }
     
-    parseExpression(): any {
-        const t: Token = this.expect(TokenType.T_NUMBER);
-        return t.value;
-    }
-
-    parseIdentifier() {
+    parseIdentifier(): Ast {
         let ident: Token = this.expect(TokenType.T_IDENTIFIER);
         this.skip(TokenType.T_WHITESPACE);
         if (this.skip(TokenType.T_OPERATOR_EQUAL)) {
@@ -339,26 +360,58 @@ class Parser {
 
             let expr: any = this.parseExpression();
             console.log(`define ${ident.value} = ${expr}`);
+
+            return new AstAssignmentExpression();
         } else {
             console.log(`get variable ${ident.value}`);
+            return new AstCallExpression();
         }
     }
 
-    parseEcho() {
+    parseEcho(): Ast {
         this.expect(TokenType.T_ECHO);
         this.skip(TokenType.T_WHITESPACE);
+
+        let expr: any = this.parseExpression();
+
+        return new AstCallExpression();
     }
 
-    parseStatement() {
+    parseExpressionLiteral(): Ast {
+        const ft = this.frontType();
+        if (ft === TokenType.T_NUMBER) {
+            const t: Token = this.expect(TokenType.T_NUMBER);
+            return new AstLiteralExpression();
+        } else {
+            throw new Error(`Unexpected token ${ft}`);
+        }
+    }
+
+    parseExpression(): Ast {
+        const ft = this.frontType();
+        if (ft === TokenType.T_ECHO) {
+            return this.parseEcho();
+        } else if (ft === TokenType.T_IDENTIFIER) {
+            return this.parseIdentifier();
+        } else if (ft === TokenType.T_NUMBER) {
+            return this.parseExpressionLiteral(); 
+        } else {
+            throw new Error(`Unexpected token ${ft}`);
+        }
+    }
+
+    parseStatement(): Ast | null {
         const ft = this.frontType();
         if (ft === TokenType.T_WHITESPACE) {
             this.goNextToken();
+            return null;
         } else if (ft === TokenType.T_SEMICOLON) {
             this.goNextToken();
+            return null;
         } else if (ft === TokenType.T_ECHO) {
-            this.parseEcho();
+            return this.parseExpression();
         } else if (ft === TokenType.T_IDENTIFIER) {
-            this.parseIdentifier();
+            return this.parseExpression();
         } else {
             throw new Error(`Unexpected token ${TokenType[ft]}`);
         }
@@ -417,7 +470,9 @@ function main(): void
     let input: Input = new Input();
     // const source_code = "echo             1234567890";
     // const source_code = "abc def ghi";
-    const source_code = "age = 50;echo age;";
+    // const source_code = "age = 50;echo age;";
+    // const source_code = "age = 50;";
+    const source_code = "echo age;";
     input.setData(source_code);
     console.log(input);
 
