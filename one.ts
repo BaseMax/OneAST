@@ -32,9 +32,10 @@ enum TokenType {
     T_ERROR=-1,
     T_EOF=0,
 
-    T_IDENTIFIER = 1,
-    T_NUMBER = 2,
-    T_SEMICOLON = 3,
+    T_WHITESPACE = 1,
+    T_IDENTIFIER = 2,
+    T_NUMBER = 3,
+    T_SEMICOLON = 4,
 }
 
 class Token {
@@ -69,8 +70,8 @@ class Location {
     public line: number = 1;
 
     constructor(index: number, offset: number, line: number) {
-        this.index = index;
-        this.offset = offset;
+        this.offset = index;
+        this.index = offset;
         this.line = line;
     }
 }
@@ -91,21 +92,18 @@ class Lexer {
 
     tokenize() {
         while (!this.isEOF()) {
-            this.location.start_location.index = this.location.end_location.index;
             this.location.start_location.offset = this.location.end_location.offset;
+            this.location.start_location.index = this.location.end_location.index;
             this.location.start_location.line = this.location.end_location.line;
 
             const token = this.nextToken();
             this.tokens.push(token);
-            debug(token);
         }
-        // this.location.start_location = new Location(0, 0, 1);
-        // debug(this.tokens);
     }
 
     nextIndex(n: number) {
-        this.location.end_location.index += n;
         this.location.end_location.offset += n;
+        this.location.end_location.index += n;
     }
 
     getLocation() : LocationInfo {
@@ -122,9 +120,8 @@ class Lexer {
         if (c === null) {
             return this.createToken(TokenType.T_EOF);
         }
-        if (c === " " || c === "\t" || c === "\n" || c === "\r") {
-            this.skipWhitespace();
-            return this.nextToken();
+        if (this.isWhitespace(c)) {
+            return this.readWhitespace();
         }
         if (c === ";") {
             this.nextIndex(1);
@@ -172,34 +169,49 @@ class Lexer {
     }
 
     getChar(): string | null {
-        if (this.location.end_location.offset >= this.input.data.length) {
+        if (this.location.end_location.index >= this.input.data.length) {
             return null;
         }
-        return this.input.data[this.location.end_location.offset];
+        return this.input.data[this.location.end_location.index];
     }
 
     nextChar(): string | null {
+        const current_c = this.getChar();
+
+        if (current_c === "\n") {
+            this.location.end_location.line++;
+            this.location.end_location.offset = 0;
+        } else {
+            this.location.end_location.offset++;
+        }
+
         this.location.end_location.index++;
-        this.location.end_location.offset++;
         return this.getChar();
     }
 
-    skipWhitespace() {
+    isWhitespace(c: string) {
+        return c === " " || c === "\t" || c === "\n" || c === "\r";
+    }
+
+    readWhitespace() {
+        let has_tab = false;
+        let has_line = false;
         let c = this.getChar();
-        while (c === " " || c === "\t" || c === "\n" || c === "\r") {
-            if (c === "\n") {
-                this.location.end_location.line++;
-                this.location.end_location.index = 0;
-            } else {
-                this.location.end_location.index++;
-            }
-            this.location.end_location.offset++;
+
+        while (c !== null && this.isWhitespace(c)) {
+            if (has_line === false && c === "\t") has_tab = true;
+            if (has_line === false && c === "\n") has_line = true;
             c = this.nextChar();
         }
+        
+        return this.createToken(TokenType.T_WHITESPACE, {
+            has_tab: has_tab,
+            has_line: has_line
+        });
     }
 
     isEOF(): boolean {
-        return this.location.end_location.offset >= this.input.data.length;
+        return this.location.end_location.index >= this.input.data.length;
     }
 }
 
@@ -216,7 +228,9 @@ function main(): void
     // let input: Input = new Input("one.ts", ".");
     // input.readFile();
     let input: Input = new Input();
-    const source_code = "echo             10";
+    // const source_code = "echo             1234567890";
+    // const source_code = "abc def ghi";
+    const source_code = "abc                6\ndef8ghi";
     input.setData(source_code);
     console.log(input);
 
@@ -224,7 +238,7 @@ function main(): void
     let lexer: Lexer = new Lexer(input);
     // console.log(lexer);
     // debug(lexer);
-    // debug(lexer.tokens);
+    debug(lexer.tokens);
 
     // =============== Parser =================
 
