@@ -477,7 +477,7 @@ class Parser {
     }
 
     skip(looking_for: TokenType): boolean {
-        if (this.frontType() === looking_for) {
+        if (!this.isEOF() && this.frontType() === looking_for) {
             this.goNextToken();
             return true;
         }
