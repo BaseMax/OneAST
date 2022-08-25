@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { parseArgs } from "util";
 
 class Input {
     file: string | null = null;
@@ -58,12 +59,14 @@ enum TokenType {
 }
 
 class Token {
+    type: TokenType;
     kind: string;
     value: any;
     location: LocationInfo;
     
-    constructor(kind: TokenType, location: LocationInfo, value?: any) {
-        this.kind = TokenType[kind];
+    constructor(type: TokenType, location: LocationInfo, value?: any) {
+        this.type = type;
+        this.kind = TokenType[type];
         this.location = location;
         this.value = value;
     }
@@ -101,7 +104,7 @@ class Location {
 
 class Lexer {
     input: Input;
-    tokens: Token[] = [];
+    tokens: Array<Token> = [];
     reservedWords: Record<string, TokenType> = {
         "if": TokenType.T_IF,
         "else": TokenType.T_ELSE,
@@ -129,6 +132,7 @@ class Lexer {
             const token = this.nextToken();
             this.tokens.push(token);
         }
+        this.location.start_location = new Location(0, 0, 1);
     }
 
     nextIndex(n: number) {
@@ -280,6 +284,69 @@ class Lexer {
     }
 }
 
+class Parser {
+    index: number = 0;
+    tokens: Array<Token>;
+
+    constructor(tokens: Array<Token>) {
+        this.tokens = tokens;
+    }
+
+    isEOF(): boolean {
+        return this.index >= this.tokens.length;
+    }
+
+    parse() {
+        while (!this.isEOF()) {
+            this.nextToken();
+        }
+        // if (t.kind === TokenType[TokenType.T_EOF]) {
+        //     return;
+        // }
+
+    }
+
+    frontType(): TokenType {
+        return this.tokens[this.index].type;
+    }
+    
+    front(): Token {
+        return this.tokens[this.index];
+    }
+
+    skip(looking_for: TokenType): void {
+        if (this.frontType() === looking_for) {
+            this.nextToken();
+        }
+    }
+
+    expect(looking_for: TokenType): void {
+        if (this.frontType() !== looking_for) {
+            throw new Error(`Expected ${looking_for} but got ${this.frontType()}`);
+        }
+        this.nextToken();
+    }
+
+    nextToken(): void {
+        this.index++;
+    }
+
+    // pop(): Token {
+    //     let result = this.tokens[this.index];
+    //     this.index += 1;
+    //     return result;
+    // }
+
+    // peek(lookingFor: TokenType): boolean {
+    //     return (this.tokens[this.index].kind == TokenType[lookingFor]);
+    // }
+
+    // front(): TokenType {
+    //     const type: string = this.tokens[this.index].kind;
+    //     return TokenType[];
+    // }
+}
+
 function debug(value: any): void
 {
     console.log(JSON.stringify(value, null, '\t'));
@@ -300,12 +367,17 @@ function main(): void
     console.log(input);
 
     // =============== Lexer =================
-    let lexer: Lexer = new Lexer(input);
-    // console.log(lexer);
+    const lexer: Lexer = new Lexer(input);
+    lexer.tokenize();
+    console.log(lexer);
     // debug(lexer);
-    debug(lexer.tokens);
+    // debug(lexer.tokens);
 
     // =============== Parser =================
+    const parser: Parser = new Parser(lexer.tokens);
+    parser.parse();
+    console.log(parser);
+
 
     // =============== AST =================
 
