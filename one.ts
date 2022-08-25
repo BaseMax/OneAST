@@ -302,9 +302,22 @@ class Parser {
         }
     }
     
+    parseExpression(): any {
+        const t: Token = this.expect(TokenType.T_NUMBER);
+        return t.value;
+    }
+
     parseIdentifier() {
-        this.expect(TokenType.T_IDENTIFIER);
+        let ident: Token = this.expect(TokenType.T_IDENTIFIER);
         this.skip(TokenType.T_WHITESPACE);
+        if (this.skip(TokenType.T_OPERATOR_EQUAL)) {
+            this.skip(TokenType.T_WHITESPACE);
+
+            let expr: any = this.parseExpression();
+            console.log(`define ${ident.value} = ${expr}`);
+        } else {
+            console.log(`get variable ${ident.value}`);
+        }
     }
 
     parseEcho() {
@@ -333,6 +346,13 @@ class Parser {
     
     front(): Token {
         return this.tokens[this.index];
+    }
+
+    has(looking_for: TokenType): boolean {
+        if (this.frontType() === looking_for) {
+            return true;
+        }
+        return false;
     }
 
     skip(looking_for: TokenType): boolean {
