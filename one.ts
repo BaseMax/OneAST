@@ -1,6 +1,13 @@
+/*
+ * 
+ * ONE - A compiler for the ONE programming language
+ * Copyright (C) 2022
+ * Author:	Max Base
+ * 
+ */
+
 import * as fs from "fs";
 import * as path from "path";
-import { parseArgs } from "util";
 
 class Input {
     file: string | null = null;
@@ -312,6 +319,15 @@ class AstExpression implements Ast {
 
 class AstAssignmentExpression implements Ast {
     kind: string = "AssignmentExpression";
+    operator: string;
+    left: Ast;
+    right: Ast;
+
+    constructor(operator: string, left: Ast, right: Ast) {
+        this.operator = operator;
+        this.left = left;
+        this.right = right;
+    }
 }
 
 class AstIdentifier implements Ast {
@@ -334,6 +350,56 @@ class AstMemberExpression implements Ast {
     }
 }
 
+class AstConditionalExpression implements Ast {
+    kind: string = "ConditionalExpression";
+    test: Ast;
+    consequent: Ast;
+    alternate: Ast;
+
+    constructor(test: Ast, consequent: Ast, alternate: Ast) {
+        this.test = test;
+        this.consequent = consequent;
+        this.alternate = alternate;
+    }
+}
+
+class AstUnaryExpression implements Ast {
+    kind: string = "UnaryExpression";
+    operator: string;
+    argument: Ast;
+
+    constructor(operator: string, argument: Ast) {
+        this.operator = operator;
+        this.argument = argument;
+    }
+}
+
+class AstLogicalExpression implements Ast {
+    kind: string = "LogicalExpression";
+    operator: string;
+    left: Ast;
+    right: Ast;
+
+    constructor(operator: string, left: Ast, right: Ast) {
+        this.operator = operator;
+        this.left = left;
+        this.right = right;
+    }
+}
+
+class AstBinaryExpression implements Ast {
+    kind: string = "BinaryExpression";
+    operator: string;
+    left: Ast;
+    right: Ast;
+
+    constructor(operator: string, left: Ast, right: Ast) {
+        this.operator = operator;
+        this.left = left;
+        this.right = right;
+    }
+}
+
 class AstCallExpression implements Ast {
     kind: string = "CallExpression";
     callee: Ast;
@@ -347,6 +413,13 @@ class AstCallExpression implements Ast {
 
 class AstLiteralExpression implements Ast {
     kind: string = "LiteralExpression";
+    type: string;
+    value: any;
+
+    constructor(type: string, value: any) {
+        this.type = type;
+        this.value = value;
+    }
 }
 
 class AstProgram implements Ast {
@@ -394,7 +467,11 @@ class Parser {
             let expr: any = this.parseExpression();
             console.log(`define ${ident.value} = ${expr}`);
 
-            return new AstAssignmentExpression();
+            return new AstAssignmentExpression(
+                "=",
+                new AstIdentifier(ident.value),
+                expr
+            );
         } else if (this.skip(TokenType.T_OPERATOR_DOT)) {
             this.skip(TokenType.T_WHITESPACE);
             let expr: any = this.parseExpression();
@@ -403,7 +480,6 @@ class Parser {
                 expr
             );
         } else {
-            console.log(`get variable ${ident.value}`);
             return new AstIdentifier(ident.value);
         }
     }
@@ -424,7 +500,7 @@ class Parser {
         const ft = this.frontType();
         if (ft === TokenType.T_NUMBER) {
             const t: Token = this.expect(TokenType.T_NUMBER);
-            return new AstLiteralExpression();
+            return new AstLiteralExpression("number", t.value);
         } else {
             throw new Error(`Unexpected token ${ft}`);
         }
@@ -517,7 +593,7 @@ function main(): void
     // const source_code = "age = 50;echo age;";
     // const source_code = "age = 50;";
     // const source_code = "echo age;a.b.c";
-    const source_code = "echo age;a";
+    const source_code = "echo age;a.b.c; age = 50;";
     input.setData(source_code);
     console.log(input);
 
