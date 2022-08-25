@@ -64,9 +64,9 @@ class LocationInfo {
 }
 
 class Location {
-    index: number = 0;
-    offset: number = 0;
-    line: number = 1;
+    public index: number = 0;
+    public offset: number = 0;
+    public line: number = 1;
 
     constructor(index: number, offset: number, line: number) {
         this.index = index;
@@ -91,11 +91,16 @@ class Lexer {
 
     tokenize() {
         while (!this.isEOF()) {
-            this.location.start_location = new Location(this.location.end_location.index, this.location.end_location.offset, this.location.end_location.line);
+            this.location.start_location.index = this.location.end_location.index;
+            this.location.start_location.offset = this.location.end_location.offset;
+            this.location.start_location.line = this.location.end_location.line;
+
             const token = this.nextToken();
             this.tokens.push(token);
+            debug(token);
         }
-        this.location.start_location = new Location(0, 0, 1);
+        // this.location.start_location = new Location(0, 0, 1);
+        // debug(this.tokens);
     }
 
     nextIndex(n: number) {
@@ -167,10 +172,10 @@ class Lexer {
     }
 
     getChar(): string | null {
-        if (this.location.end_location.index >= this.input.data.length) {
+        if (this.location.end_location.offset >= this.input.data.length) {
             return null;
         }
-        return this.input.data[this.location.end_location.index];
+        return this.input.data[this.location.end_location.offset];
     }
 
     nextChar(): string | null {
@@ -184,31 +189,42 @@ class Lexer {
         while (c === " " || c === "\t" || c === "\n" || c === "\r") {
             if (c === "\n") {
                 this.location.end_location.line++;
+                this.location.end_location.index = 0;
+            } else {
+                this.location.end_location.index++;
             }
+            this.location.end_location.offset++;
             c = this.nextChar();
         }
     }
 
     isEOF(): boolean {
-        return this.location.end_location.index >= this.input.data.length;
+        return this.location.end_location.offset >= this.input.data.length;
     }
 }
 
-function main(): void {
+function debug(value: any): void
+{
+    console.log(JSON.stringify(value, null, '\t'));
+}
+
+function main(): void
+{
     console.log(`Hello!`);
 
     // =============== Input =================
     // let input: Input = new Input("one.ts", ".");
     // input.readFile();
     let input: Input = new Input();
-    const source_code = "echo 10";
+    const source_code = "echo             10";
     input.setData(source_code);
     console.log(input);
 
     // =============== Lexer =================
     let lexer: Lexer = new Lexer(input);
-    console.log(lexer);
-    console.log(JSON.stringify(lexer, null, '\t'));
+    // console.log(lexer);
+    // debug(lexer);
+    // debug(lexer.tokens);
 
     // =============== Parser =================
 
