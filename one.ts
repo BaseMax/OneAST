@@ -48,6 +48,7 @@ enum TokenType {
     T_OPERATOR_MULTIPLY = 10,
     T_OPERATOR_DIVIDE = 11,
     T_OPERATOR_EQUAL = 12,
+    T_OPERATOR_DOT = 13,
 
     T_ECHO,
     T_IF,
@@ -176,6 +177,10 @@ class Lexer {
         if (c === "/") {
             this.nextIndex(1);
             return this.createToken(TokenType.T_OPERATOR_DIVIDE);
+        }
+        if (c === ".") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_OPERATOR_DOT);
         }
         if (c === "(") {
             this.nextIndex(1);
@@ -309,8 +314,35 @@ class AstAssignmentExpression implements Ast {
     kind: string = "AssignmentExpression";
 }
 
+class AstIdentifier implements Ast {
+    kind: string = "Identifier";
+    name: string;
+
+    constructor(name: string) {
+        this.name = name;
+    }
+}
+
+class AstMemberExpression implements Ast {
+    kind: string = "MemberExpression";
+    object: Ast;
+    property: Ast;
+
+    constructor(object: Ast, property: Ast) {
+        this.object = object;
+        this.property = property;
+    }
+}
+
 class AstCallExpression implements Ast {
     kind: string = "CallExpression";
+    callee: Ast;
+    arguments: Array<Ast>;
+
+    constructor(callee: Ast, args: Array<Ast>) {
+        this.callee = callee;
+        this.arguments = args;
+    }
 }
 
 class AstLiteralExpression implements Ast {
@@ -355,6 +387,7 @@ class Parser {
     parseIdentifier(): Ast {
         let ident: Token = this.expect(TokenType.T_IDENTIFIER);
         this.skip(TokenType.T_WHITESPACE);
+
         if (this.skip(TokenType.T_OPERATOR_EQUAL)) {
             this.skip(TokenType.T_WHITESPACE);
 
@@ -362,9 +395,16 @@ class Parser {
             console.log(`define ${ident.value} = ${expr}`);
 
             return new AstAssignmentExpression();
+        } else if (this.skip(TokenType.T_OPERATOR_DOT)) {
+            this.skip(TokenType.T_WHITESPACE);
+            let expr: any = this.parseExpression();
+            return new AstMemberExpression(
+                new AstIdentifier(ident.value),
+                expr
+            );
         } else {
             console.log(`get variable ${ident.value}`);
-            return new AstCallExpression();
+            return new AstIdentifier(ident.value);
         }
     }
 
@@ -374,7 +414,10 @@ class Parser {
 
         let expr: any = this.parseExpression();
 
-        return new AstCallExpression();
+        return new AstCallExpression(
+            new AstIdentifier("echo"),
+            [ expr ]
+        );
     }
 
     parseExpressionLiteral(): Ast {
@@ -418,6 +461,7 @@ class Parser {
     }
 
     frontType(): TokenType {
+        console.log(this.index, this.tokens[this.index]);
         return this.tokens[this.index].type;
     }
     
@@ -472,7 +516,8 @@ function main(): void
     // const source_code = "abc def ghi";
     // const source_code = "age = 50;echo age;";
     // const source_code = "age = 50;";
-    const source_code = "echo age;";
+    // const source_code = "echo age;a.b.c";
+    const source_code = "echo age;a";
     input.setData(source_code);
     console.log(input);
 
@@ -486,8 +531,9 @@ function main(): void
     // =============== Parser =================
     const parser: Parser = new Parser(lexer.location, lexer.tokens);
     const ast: AstProgram = parser.parse();
-    console.log(parser);
-    console.log(ast);
+    // console.log(parser);
+    // console.log(ast);
+    debug(ast);
 
     // =============== AST =================
 
