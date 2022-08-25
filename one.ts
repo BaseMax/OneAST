@@ -70,9 +70,13 @@ class Location {
     public line: number = 1;
 
     constructor(index: number, offset: number, line: number) {
-        this.offset = index;
-        this.index = offset;
+        this.index = index;
+        this.offset = offset;
         this.line = line;
+    }
+
+    deep(): Location {
+        return new Location(this.index, this.offset, this.line);
     }
 }
 
@@ -92,9 +96,7 @@ class Lexer {
 
     tokenize() {
         while (!this.isEOF()) {
-            this.location.start_location.offset = this.location.end_location.offset;
-            this.location.start_location.index = this.location.end_location.index;
-            this.location.start_location.line = this.location.end_location.line;
+            this.location.start_location = this.location.end_location.deep();
 
             const token = this.nextToken();
             this.tokens.push(token);
@@ -107,7 +109,7 @@ class Lexer {
     }
 
     getLocation() : LocationInfo {
-        return new LocationInfo(this.location.start_location, this.location.end_location);
+        return new LocationInfo(this.location.start_location.deep(), this.location.end_location.deep());
     }
 
     createToken(kind: TokenType, value?: any) {
