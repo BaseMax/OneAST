@@ -293,17 +293,38 @@ class Parser {
     }
 
     isEOF(): boolean {
-        return this.index >= this.tokens.length;
+        return this.index >= this.tokens.length || this.frontType() === TokenType.T_EOF;
     }
 
     parse() {
         while (!this.isEOF()) {
-            this.nextToken();
+            this.parseStatement();
         }
-        // if (t.kind === TokenType[TokenType.T_EOF]) {
-        //     return;
-        // }
+    }
+    
+    parseIdentifier() {
+        this.expect(TokenType.T_IDENTIFIER);
+        this.skip(TokenType.T_WHITESPACE);
+    }
 
+    parseEcho() {
+        this.expect(TokenType.T_ECHO);
+        this.skip(TokenType.T_WHITESPACE);
+    }
+
+    parseStatement() {
+        const ft = this.frontType();
+        if (ft === TokenType.T_WHITESPACE) {
+            this.goNextToken();
+        } else if (ft === TokenType.T_SEMICOLON) {
+            this.goNextToken();
+        } else if (ft === TokenType.T_ECHO) {
+            this.parseEcho();
+        } else if (ft === TokenType.T_IDENTIFIER) {
+            this.parseIdentifier();
+        } else {
+            throw new Error(`Unexpected token ${TokenType[ft]}`);
+        }
     }
 
     frontType(): TokenType {
@@ -314,37 +335,27 @@ class Parser {
         return this.tokens[this.index];
     }
 
-    skip(looking_for: TokenType): void {
+    skip(looking_for: TokenType): boolean {
         if (this.frontType() === looking_for) {
-            this.nextToken();
+            this.goNextToken();
+            return true;
         }
+        return false;
     }
 
-    expect(looking_for: TokenType): void {
-        if (this.frontType() !== looking_for) {
-            throw new Error(`Expected ${looking_for} but got ${this.frontType()}`);
+    expect(looking_for: TokenType): Token {
+        let ft: TokenType = this.frontType();
+        if (ft !== looking_for) {
+            throw new Error(`Expected ${TokenType[looking_for]} but got ${TokenType[ft]}`);
         }
-        this.nextToken();
+        const f: Token = this.front();
+        this.goNextToken();
+        return f;
     }
 
-    nextToken(): void {
+    goNextToken(): void {
         this.index++;
     }
-
-    // pop(): Token {
-    //     let result = this.tokens[this.index];
-    //     this.index += 1;
-    //     return result;
-    // }
-
-    // peek(lookingFor: TokenType): boolean {
-    //     return (this.tokens[this.index].kind == TokenType[lookingFor]);
-    // }
-
-    // front(): TokenType {
-    //     const type: string = this.tokens[this.index].kind;
-    //     return TokenType[];
-    // }
 }
 
 function debug(value: any): void
