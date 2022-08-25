@@ -284,11 +284,33 @@ class Lexer {
     }
 }
 
+class Ast {
+    kind: string = "";
+}
+
+class AstStatement implements Ast {
+    kind: string = "Statement";
+}
+
+class AstProgram implements Ast {
+    kind: string = "Program";
+    body: AstStatement[];
+    errors: string[] = [];
+    location: LocationInfo;
+
+    constructor(body: AstStatement[], location: LocationInfo) {
+        this.body = body;
+        this.location = location;
+    }
+}
+
 class Parser {
     index: number = 0;
+    location: LocationInfo;
     tokens: Array<Token>;
 
-    constructor(tokens: Array<Token>) {
+    constructor(location: LocationInfo, tokens: Array<Token>) {
+        this.location = location;
         this.tokens = tokens;
     }
 
@@ -297,9 +319,11 @@ class Parser {
     }
 
     parse() {
+        let statements: AstStatement[] = [];
         while (!this.isEOF()) {
             this.parseStatement();
         }
+        return new AstProgram(statements, this.location);
     }
     
     parseExpression(): any {
@@ -405,10 +429,10 @@ function main(): void
     // debug(lexer.tokens);
 
     // =============== Parser =================
-    const parser: Parser = new Parser(lexer.tokens);
-    parser.parse();
+    const parser: Parser = new Parser(lexer.location, lexer.tokens);
+    const ast: AstProgram = parser.parse();
     console.log(parser);
-
+    console.log(ast);
 
     // =============== AST =================
 
