@@ -18,7 +18,7 @@ class Input {
     readFile() {
         if (this.file && this.path) {
             const full_path = this.path + path.sep + this.file;
-            console.log(full_path);
+
             if (fs.existsSync(full_path)) {
                 this.data = fs.readFileSync(full_path, "utf8");
             } else {
@@ -40,14 +40,26 @@ enum TokenType {
 class Token {
     kind: string;
     value: any;
-
-    constructor(kind: TokenType, value?: any) {
+    location: LocationInfo;
+    
+    constructor(kind: TokenType, location: LocationInfo, value?: any) {
         this.kind = TokenType[kind];
+        this.location = location;
         this.value = value;
     }
 
     print(): string {
         return `Token(${this.kind})`;
+    }
+}
+
+class LocationInfo {
+    start_location: Location;
+    end_location: Location;
+
+    constructor(start_location?: Location, end_location?: Location) {
+        this.start_location = start_location || new Location(0, 0, 1);
+        this.end_location= end_location || new Location(0, 0, 1);
     }
 }
 
@@ -67,7 +79,7 @@ class Lexer {
     input: Input;
     tokens: Token[] = [];
 
-    location: Location = new Location(0, 0, 1);
+    location: LocationInfo = new LocationInfo();
 
     constructor(input: Input) {
         this.input = input;
@@ -78,22 +90,35 @@ class Lexer {
     }
 
     tokenize() {
+        console.log("Initial location:", this.getLocation());
         while (!this.isEOF()) {
-            this.tokens.push(this.nextToken());
+            const start_location = this.location.end_location;
+            const token = this.nextToken();
+
+            this.tokens.push(token);
+            token.location.start_location = start_location;
         }
+        this.location.start_location = new Location(0, 0, 1);
     }
 
     nextIndex(n: number) {
-        this.location.index += n;
-        this.location.offset += n;
+        this.location.end_location.index += n;
+        this.location.end_location.offset += n;
+    }
+
+    getLocation() : LocationInfo {
+        return new LocationInfo(this.location.start_location, this.location.end_location);
+    }
+
+    createToken(kind: TokenType, value?: any) {
+        return new Token(kind, this.getLocation(), value);
     }
 
     nextToken(): Token {
         let c = this.getChar();
-        console.log("nextToken: loop", c);
 
         if (c === null) {
-            return new Token(TokenType.T_EOF);
+            return this.createToken(TokenType.T_EOF);
         }
         if (c === " " || c === "\t" || c === "\n" || c === "\r") {
             this.skipWhitespace();
@@ -101,7 +126,7 @@ class Lexer {
         }
         if (c === ";") {
             this.nextIndex(1);
-            return new Token(TokenType.T_SEMICOLON);
+            return this.createToken(TokenType.T_SEMICOLON);
         }
         if (this.isDigit(c)) {
             return this.readNumber();
@@ -109,7 +134,7 @@ class Lexer {
         if (this.isAlpha(c)) {
             return this.readIdentifier();
         }
-        return new Token(TokenType.T_ERROR, `Unexpected character ${c}`);
+        return this.createToken(TokenType.T_ERROR, `Unexpected character ${c}`);
     }
 
     isDigit(c: string): boolean {
@@ -123,14 +148,15 @@ class Lexer {
     readNumber() : Token {
         let number = "";
         let c = this.getChar();
+
+        console.log(this.getLocation());
         
         while (c !== null && this.isDigit(c)) {
-            console.log("readNumber / loop", c);
             number += c;
             c = this.nextChar();
         }
 
-        return new Token(TokenType.T_NUMBER, number);
+        return this.createToken(TokenType.T_NUMBER, number);
     }
 
     readIdentifier() : Token {
@@ -138,24 +164,23 @@ class Lexer {
         let identifier = "";
 
         while (c !== null && this.isAlpha(c)) {
-            console.log("readIdentifier / loop", c);
             identifier += c;
             c = this.nextChar();
         }
 
-        return new Token(TokenType.T_IDENTIFIER, identifier);
+        return this.createToken(TokenType.T_IDENTIFIER, identifier);
     }
 
     getChar(): string | null {
-        if (this.location.index >= this.input.data.length) {
+        if (this.location.end_location.index >= this.input.data.length) {
             return null;
         }
-        return this.input.data[this.location.index];
+        return this.input.data[this.location.end_location.index];
     }
 
     nextChar(): string | null {
-        this.location.index++;
-        this.location.offset++;
+        this.location.end_location.index++;
+        this.location.end_location.offset++;
         return this.getChar();
     }
 
@@ -163,14 +188,14 @@ class Lexer {
         let c = this.getChar();
         while (c === " " || c === "\t" || c === "\n" || c === "\r") {
             if (c === "\n") {
-                this.location.line++;
+                this.location.end_location.line++;
             }
             c = this.nextChar();
         }
     }
 
     isEOF(): boolean {
-        return this.location.index >= this.input.data.length;
+        return this.location.end_location.index >= this.input.data.length;
     }
 }
 
@@ -186,8 +211,9 @@ function main(): void {
     console.log(input);
 
     // =============== Lexer =================
-    let tokens: Lexer = new Lexer(input);
-    console.log(tokens);
+    let lexer: Lexer = new Lexer(input);
+    console.log(lexer);
+    console.log(JSON.stringify(lexer, null, '\t'));
 
     // =============== Parser =================
 
