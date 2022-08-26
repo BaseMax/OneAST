@@ -9,6 +9,14 @@
 import * as fs from "fs";
 import * as path from "path";
 
+// --- General Helper function ---
+function assert(predicate: boolean): asserts predicate is true {
+    if (!predicate) throw new Error("Assertion failure");
+    return;
+}
+
+interface binding_power { left_power: number; right_power: number; }
+
 class Input {
     file: string | null = null;
     path: string | null = null;
@@ -59,6 +67,11 @@ enum TokenType {
     T_OPERATOR_DIVIDE = 13,
     T_OPERATOR_EQUAL = 14,
     T_OPERATOR_DOT = 15,
+    T_OPERATOR_COLON = 16,
+    T_OPERATOR_QUESTION = 17,
+    T_OPERATOR_BANG = 18,
+    T_OPERATOR_POWER = 19,
+
 
     // >
     // <
@@ -201,6 +214,10 @@ class Lexer {
         }
         if (c === "*") {
             this.nextIndex(1);
+            if (this.getChar() === "*") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_POWER);
+            }
             return this.createToken(TokenType.T_OPERATOR_MULTIPLY);
         }
         if (c === "/") {
@@ -210,6 +227,14 @@ class Lexer {
         if (c === ".") {
             this.nextIndex(1);
             return this.createToken(TokenType.T_OPERATOR_DOT);
+        }
+        if (c === ":") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_OPERATOR_COLON);
+        }
+        if (c === "?") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_OPERATOR_QUESTION);
         }
         if (c === "(") {
             this.nextIndex(1);
@@ -375,6 +400,41 @@ class AstEcho implements Ast {
     kind: string = "Echo";
 }
 
+class AstTernaryExpression implements Ast {
+    kind: string = "TernaryExpression";
+    condition: Ast;
+    true_value: Ast;
+    false_value: Ast;
+
+    constructor(condition: Ast, true_value: Ast, false_value: Ast) {
+        this.condition = condition;
+        this.true_value = true_value;
+        this.false_value = false_value;
+    }
+}
+
+class AstPostfixExpression implements Ast {
+    kind: string = "PostfixExpression";
+    operator: Token;
+    operand: Ast;
+
+    constructor(operator: Token, operand: Ast) {
+        this.operator = operator;
+        this.operand = operand;
+    }
+}
+
+class AstPrefixExpression implements Ast {
+    kind: string = "PrefixExpression";
+    operator: Token;
+    right: Ast;
+
+    constructor(operator: Token, right: Ast) {
+        this.operator = operator;
+        this.right = right;
+    }
+}
+
 class AstExpression implements Ast {
     kind: string = "Expression";
     expression: Ast;
@@ -469,11 +529,11 @@ class AstLogicalExpression implements Ast {
 
 class AstBinaryExpression implements Ast {
     kind: string = "BinaryExpression";
-    operator: string;
+    operator: Token;
     left: Ast;
     right: Ast;
 
-    constructor(operator: string, left: Ast, right: Ast) {
+    constructor(operator: Token, left: Ast, right: Ast) {
         this.operator = operator;
         this.left = left;
         this.right = right;
@@ -639,24 +699,172 @@ class Parser {
         return new AstIfStatement(test, consequent, alternate);
     }
 
-    parseExpression(): Ast {
+    parseSubExpression(): Ast {
+        this.skip(TokenType.T_PARENTHESIS_OPEN);
+        this.skip(TokenType.T_WHITESPACE);
+        let expr: Ast = this.parseExpression();
+        this.skip(TokenType.T_WHITESPACE);
+        this.skip(TokenType.T_PARENTHESIS_CLOSE);
+
+        return expr;
+    }
+
+    expectOneOf(tokens: Array<TokenType>): Token|null {
+        let res: Token|null = null;
+
+        for (let i = 0; i < tokens.length; i++) {
+            if (this.frontType() === tokens[i]) {
+                res = this.front();
+                this.goNextToken();
+                break;
+            }
+        }
+
+        if (res === null) {
+            throw new Error(`Unexpected token ${this.frontType()}`);
+            return null;
+        }
+        return res;
+    }
+
+    parsePrefixExpression(min_bp: number): Ast {
+        let operator: Token|null = this.expectOneOf([
+            TokenType.T_OPERATOR_PLUS,
+            TokenType.T_OPERATOR_MINUS,
+        ]);
+
+        if (operator === null) {
+            throw new Error(`Unexpected token ${this.frontType()}`);
+        }
+
+        const expr: Ast = this.parseExpression(min_bp);
+        return new AstPrefixExpression(operator, expr);
+    }
+
+    // Look up the right binding power of a given prefix operator
+    prefix_bp_lookup(whichOperator: TokenType): number {
+        switch(whichOperator) {
+            case TokenType.T_OPERATOR_PLUS: return 300;
+            case TokenType.T_OPERATOR_MINUS: return 300;
+            default: return 0;
+        }
+    }
+    
+    parsePostfixExpression(lhs: Ast): Ast {
+        let operator: Token|null = this.expectOneOf([
+            TokenType.T_OPERATOR_PLUS,
+            TokenType.T_OPERATOR_MINUS,
+        ]);
+
+        if (operator === null) {
+            throw new Error(`Unexpected token ${this.frontType()}`);
+        }
+
+        return new AstPostfixExpression(operator, lhs);
+    }
+    
+    parseTernaryExpression(clause: Ast): Ast {
+        this.skip(TokenType.T_WHITESPACE);
+
+        this.expect(TokenType.T_OPERATOR_QUESTION);
+        this.skip(TokenType.T_WHITESPACE);
+
+        let consequent: Ast = this.parseExpression(0);
+        this.skip(TokenType.T_WHITESPACE);
+
+        this.expect(TokenType.T_OPERATOR_COLON);
+        this.skip(TokenType.T_WHITESPACE);
+
+        let alternate: Ast = this.parseExpression(0);
+        this.skip(TokenType.T_WHITESPACE);
+
+        return new AstTernaryExpression(clause, consequent, alternate);
+    }
+    
+    parseBinaryExpression(_lhs: Ast, min_bp: number): Ast {
+        let lhs: Ast = _lhs;
+        let operator: Token|null = this.expectOneOf([
+            TokenType.T_OPERATOR_PLUS,
+            TokenType.T_OPERATOR_MINUS,
+        ]);
+
+        if (operator === null) {
+            throw new Error(`Unexpected token ${this.frontType()}`);
+        }
+
+        let rhs: Ast = this.parseExpression(min_bp);
+
+        return new AstBinaryExpression(operator, lhs, rhs);
+    }
+
+    LeftAssociative(priority: number): binding_power {
+        return { left_power: (priority - 1), right_power: priority };
+    }
+
+    RightAssociative(priority: number): binding_power {
+        return { left_power: (priority + 1), right_power: priority };
+    }
+
+    bp_lookup(whichOperator: TokenType): binding_power {
+        const no_binding_power: binding_power = {left_power: 0, right_power: 0};
+
+        switch (whichOperator) {
+            case TokenType.T_OPERATOR_PLUS: return this.LeftAssociative(100);
+            case TokenType.T_OPERATOR_MINUS: return this.LeftAssociative(100);
+            case TokenType.T_OPERATOR_MULTIPLY: return this.LeftAssociative(200);
+            case TokenType.T_OPERATOR_DIVIDE: return this.LeftAssociative(200);
+            // case TokenType.T_POW: return this.LeftAssociative(99);
+            case TokenType.T_OPERATOR_POWER: return this.RightAssociative(99);
+            case TokenType.T_OPERATOR_QUESTION: return this.RightAssociative(1000);
+
+            case TokenType.T_OPERATOR_GREATER: return this.LeftAssociative(50);
+            case TokenType.T_OPERATOR_GREATER_EQUAL: return this.LeftAssociative(50);
+            case TokenType.T_OPERATOR_LESS: return this.LeftAssociative(50);
+            case TokenType.T_OPERATOR_LESS_EQUAL: return this.LeftAssociative(50);
+            case TokenType.T_OPERATOR_EQUAL_EQUAL: return this.LeftAssociative(50);
+            case TokenType.T_OPERATOR_NOT_EQUAL: return this.LeftAssociative(50);
+
+            // --- Postfix --- (Always Right Associative)
+            case TokenType.T_OPERATOR_BANG: return this.RightAssociative(400);
+            //Note: Postfix operators are always RightAssociative
+
+            default: return no_binding_power;
+        }
+    }
+
+    parseExpression(binding_power_to_my_right: number = 0): Ast {
+        let result: Ast | null = null;
+
         const ft = this.frontType();
-        if (ft === TokenType.T_ECHO) {
-            return this.parseEcho();
-        } else if (ft === TokenType.T_IDENTIFIER) {
-            return this.parseIdentifier();
-        } else if (ft === TokenType.T_NUMBER) {
-            return this.parseExpressionLiteral(); 
+        if (ft === TokenType.T_NUMBER) {
+            result = this.parseExpressionLiteral();   
         } else if (ft === TokenType.T_PARENTHESIS_OPEN) {
-            this.skip(TokenType.T_PARENTHESIS_OPEN);
-            this.skip(TokenType.T_WHITESPACE);
-            let expr: Ast = this.parseExpression();
-            this.skip(TokenType.T_WHITESPACE);
-            this.skip(TokenType.T_PARENTHESIS_CLOSE);
-            return expr;
+            result = this.parseSubExpression();
+        } if (ft === TokenType.T_IDENTIFIER) {
+            return this.parseIdentifier();
+        } else if (this.has(TokenType.T_OPERATOR_PLUS) || this.has(TokenType.T_OPERATOR_MINUS)) {
+            result = this.parsePrefixExpression(this.prefix_bp_lookup(ft));
         } else {
             throw new Error(`Unexpected token ${TokenType[ft]}`);
         }
+
+        assert(result != null); // We should always have either a LHS or Prefix Operator at this point.
+
+        while(binding_power_to_my_right < this.bp_lookup(this.frontType()).left_power ) {
+            // Is it a postfix expression?
+            if (this.has(TokenType.T_OPERATOR_BANG)) {
+                result = this.parsePostfixExpression(result);
+            } else if (this.has(TokenType.T_OPERATOR_QUESTION)) {
+                result = this.parseTernaryExpression(result)
+            } else {
+                // It must be a binary expression
+                result = this.parseBinaryExpression(result, this.bp_lookup(this.frontType()).right_power);
+            }
+        }
+
+        
+        assert(result != null); // This factory should always return an expression tree fragment
+        return result as AstExpression;
     }
 
     parseStatement(): Ast | null {
