@@ -505,9 +505,9 @@ class AstIfStatement implements Ast {
     kind: string = "IfStatement";
     test: Ast;
     consequent: Ast;
-    alternate: Ast|null;
+    alternate: Ast | null;
 
-    constructor(test: Ast, consequent: Ast, alternate: Ast|null) {
+    constructor(test: Ast, consequent: Ast, alternate: Ast | null) {
         this.test = test;
         this.consequent = consequent;
         this.alternate = alternate;
@@ -604,7 +604,7 @@ class Parser {
     parse() {
         let statements: AstStatement[] = [];
         while (!this.isEOF()) {
-            const ast: Ast|null = this.parseStatement();
+            const ast: Ast | null = this.parseStatement();
             if (ast !== null) statements.push(ast);
         }
         return new AstProgram(statements, this.location);
@@ -668,7 +668,7 @@ class Parser {
         this.skip(TokenType.T_WHITESPACE);
         let statements: AstStatement[] = [];
         while (!this.isEOF() && !this.skip(TokenType.T_CLOSE_BRACE)) {
-            const ast: Ast|null = this.parseStatement();
+            const ast: Ast | null = this.parseStatement();
             if (ast !== null) statements.push(ast);
         }
         return new AstBlock(statements);
@@ -684,7 +684,7 @@ class Parser {
         let consequent: Ast = this.parseBlock();
         this.skip(TokenType.T_WHITESPACE);
 
-        let alternate: Ast|null = null;
+        let alternate: Ast | null = null;
         if (this.skip(TokenType.T_ELSE)) {
             this.skip(TokenType.T_WHITESPACE);
 
@@ -709,8 +709,8 @@ class Parser {
         return expr;
     }
 
-    expectOneOf(tokens: Array<TokenType>): Token|null {
-        let res: Token|null = null;
+    expectOneOf(tokens: Array<TokenType>): Token | null {
+        let res: Token | null = null;
 
         for (let i = 0; i < tokens.length; i++) {
             if (this.frontType() === tokens[i]) {
@@ -728,7 +728,7 @@ class Parser {
     }
 
     parsePrefixExpression(min_bp: number): Ast {
-        let operator: Token|null = this.expectOneOf([
+        let operator: Token | null = this.expectOneOf([
             TokenType.T_OPERATOR_PLUS,
             TokenType.T_OPERATOR_MINUS,
         ]);
@@ -751,7 +751,7 @@ class Parser {
     }
     
     parsePostfixExpression(lhs: Ast): Ast {
-        let operator: Token|null = this.expectOneOf([
+        let operator: Token | null = this.expectOneOf([
             TokenType.T_OPERATOR_PLUS,
             TokenType.T_OPERATOR_MINUS,
         ]);
@@ -783,7 +783,7 @@ class Parser {
     
     parseBinaryExpression(_lhs: Ast, min_bp: number): Ast {
         let lhs: Ast = _lhs;
-        let operator: Token|null = this.expectOneOf([
+        let operator: Token | null = this.expectOneOf([
             TokenType.T_OPERATOR_PLUS,
             TokenType.T_OPERATOR_MINUS,
         ]);
