@@ -502,6 +502,10 @@ class AstLiteralExpression implements Ast {
     }
 }
 
+class AstEmptyStatement implements Ast {
+    kind: string = "EmptyStatement";
+}
+
 class AstBlock implements Ast {
     kind: string = "Block";
     statements: Array<Ast>;
@@ -596,7 +600,10 @@ class Parser {
     }
 
     parseBlock(): Ast {
-        console.log("parseBlock: ", this.front());
+        if (this.skip(TokenType.T_SEMICOLON)) {
+            return new AstEmptyStatement();
+        }
+
         this.expect(TokenType.T_OPEN_BRACE);
         this.skip(TokenType.T_WHITESPACE);
         let statements: AstStatement[] = [];
@@ -621,12 +628,12 @@ class Parser {
         if (this.skip(TokenType.T_ELSE)) {
             this.skip(TokenType.T_WHITESPACE);
 
-            if (this.has(TokenType.T_OPEN_BRACE)) {
+            if (this.has(TokenType.T_OPEN_BRACE) || this.has(TokenType.T_SEMICOLON)) {
                 alternate = this.parseBlock();
             } else if(this.has(TokenType.T_IF)) {
                 alternate = this.parseStatement();
             } else {
-                throw new Error(`Unexpected token ${this.frontType()}`);
+                throw new Error(`Unexpected token ${this.frontType()} in else statement`);
             }
         }
         return new AstIfStatement(test, consequent, alternate);
@@ -729,7 +736,7 @@ function main(): void
     // const source_code = "age = 50;";
     // const source_code = "echo age;a.b.c";
     // const source_code = "echo age;a.b.c; age = 50;if(5>2){echo 1;}";//  else {echo 2;}";
-    const source_code = "if(5){echo 1;} else {echo 2;}";
+    const source_code = "if(5){echo 1;} else {echo 2;} if(5) ;";
     input.setData(source_code);
     console.log(input);
 
