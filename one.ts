@@ -50,12 +50,15 @@ enum TokenType {
     T_PARENTHESIS_OPEN = 6,
     T_PARENTHESIS_CLOSE = 7,
 
-    T_OPERATOR_PLUS = 8,
-    T_OPERATOR_MINUS = 9,
-    T_OPERATOR_MULTIPLY = 10,
-    T_OPERATOR_DIVIDE = 11,
-    T_OPERATOR_EQUAL = 12,
-    T_OPERATOR_DOT = 13,
+    T_OPEN_BRACE = 8,
+    T_CLOSE_BRACE = 9,
+
+    T_OPERATOR_PLUS = 10,
+    T_OPERATOR_MINUS = 11,
+    T_OPERATOR_MULTIPLY = 12,
+    T_OPERATOR_DIVIDE = 13,
+    T_OPERATOR_EQUAL = 14,
+    T_OPERATOR_DOT = 15,
 
     T_ECHO,
     T_IF,
@@ -196,6 +199,14 @@ class Lexer {
         if (c === ")") {
             this.nextIndex(1);
             return this.createToken(TokenType.T_PARENTHESIS_CLOSE);
+        }
+        if (c === "{") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_OPEN_BRACE);
+        }
+        if (c === "}") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_CLOSE_BRACE);
         }
         if (c === "=") {
             this.nextIndex(1);
@@ -374,6 +385,19 @@ class AstUnaryExpression implements Ast {
     }
 }
 
+class AstIfStatement implements Ast {
+    kind: string = "IfStatement";
+    test: Ast;
+    consequent: Ast;
+    alternate: Ast|null;
+
+    constructor(test: Ast, consequent: Ast, alternate: Ast|null) {
+        this.test = test;
+        this.consequent = consequent;
+        this.alternate = alternate;
+    }
+}
+
 class AstLogicalExpression implements Ast {
     kind: string = "LogicalExpression";
     operator: string;
@@ -419,6 +443,15 @@ class AstLiteralExpression implements Ast {
     constructor(type: string, value: any) {
         this.type = type;
         this.value = value;
+    }
+}
+
+class AstBlock implements Ast {
+    kind: string = "Block";
+    statements: Array<Ast>;
+
+    constructor(statements: Array<Ast>) {
+        this.statements = statements;
     }
 }
 
@@ -506,6 +539,34 @@ class Parser {
         }
     }
 
+    parseBlock(): Ast {
+        this.expect(TokenType.T_OPEN_BRACE);
+        this.skip(TokenType.T_WHITESPACE);
+        let statements: AstStatement[] = [];
+        while (!this.isEOF() && !this.skip(TokenType.T_CLOSE_BRACE)) {
+            const ast: Ast|null = this.parseStatement();
+            if (ast !== null) statements.push(ast);
+        }
+        return new AstBlock(statements);
+    }
+
+    parseIf(): Ast {
+        this.expect(TokenType.T_IF);
+        this.skip(TokenType.T_WHITESPACE);
+
+        let test: Ast = this.parseExpression();
+        this.skip(TokenType.T_WHITESPACE);
+
+        let consequent: Ast = this.parseBlock();
+        let alternate: Ast|null = null;
+        if (this.skip(TokenType.T_ELSE)) {
+            this.skip(TokenType.T_WHITESPACE);
+
+            alternate = this.parseStatement();
+        }
+        return new AstIfStatement(test, consequent, alternate);
+    }
+
     parseExpression(): Ast {
         const ft = this.frontType();
         if (ft === TokenType.T_ECHO) {
@@ -514,8 +575,15 @@ class Parser {
             return this.parseIdentifier();
         } else if (ft === TokenType.T_NUMBER) {
             return this.parseExpressionLiteral(); 
+        } else if (ft === TokenType.T_PARENTHESIS_OPEN) {
+            this.skip(TokenType.T_PARENTHESIS_OPEN);
+            this.skip(TokenType.T_WHITESPACE);
+            let expr: Ast = this.parseExpression();
+            this.skip(TokenType.T_WHITESPACE);
+            this.skip(TokenType.T_PARENTHESIS_CLOSE);
+            return expr;
         } else {
-            throw new Error(`Unexpected token ${ft}`);
+            throw new Error(`Unexpected token ${TokenType[ft]}`);
         }
     }
 
@@ -527,6 +595,8 @@ class Parser {
         } else if (ft === TokenType.T_SEMICOLON) {
             this.goNextToken();
             return null;
+        } else if (ft === TokenType.T_IF) {
+            return this.parseIf();
         } else if (ft === TokenType.T_ECHO) {
             return this.parseExpression();
         } else if (ft === TokenType.T_IDENTIFIER) {
@@ -593,7 +663,7 @@ function main(): void
     // const source_code = "age = 50;echo age;";
     // const source_code = "age = 50;";
     // const source_code = "echo age;a.b.c";
-    const source_code = "echo age;a.b.c; age = 50;";
+    const source_code = "echo age;a.b.c; age = 50;if(1){}";
     input.setData(source_code);
     console.log(input);
 
