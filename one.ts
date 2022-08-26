@@ -812,17 +812,18 @@ class Parser {
     
     parseBinaryExpression(_lhs: Ast, min_bp: number): Ast {
         let lhs: Ast = _lhs;
-        let operator: Token | null = this.expectOneOf([
-            TokenType.T_OPERATOR_PLUS,
-            TokenType.T_OPERATOR_MINUS,
-        ]);
+        // let operator: Token | null = this.expectOneOf([
+        //     TokenType.T_OPERATOR_PLUS,
+        //     TokenType.T_OPERATOR_MINUS,
+        // ]);
 
         // console.log("ft is:", this.front());
-        // let operator: Token | null = this.front();
+        let operator: Token | null = this.front();
 
         if (operator === null) {
             throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
         }
+        this.goNextToken();
 
         let rhs: Ast = this.parseExpression(min_bp);
 
@@ -878,9 +879,9 @@ class Parser {
         } else if (this.has(TokenType.T_OPERATOR_PLUS) || this.has(TokenType.T_OPERATOR_MINUS)) {
             result = this.parsePrefixExpression(this.prefix_bp_lookup(ft));
         }
-        // else {
-        //     throw new Error(`parseExpression: Unexpected token ${TokenType[ft]}`);
-        // }
+        else {
+            throw new Error(`parseExpression: Unexpected token ${TokenType[ft]}`);
+        }
 
         console.log("Result is: ", result);
 
