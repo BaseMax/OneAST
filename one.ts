@@ -734,7 +734,7 @@ class Parser {
         ]);
 
         if (operator === null) {
-            throw new Error(`Unexpected token ${this.frontType()}`);
+            throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
         }
 
         const expr: Ast = this.parseExpression(min_bp);
@@ -757,7 +757,7 @@ class Parser {
         ]);
 
         if (operator === null) {
-            throw new Error(`Unexpected token ${this.frontType()}`);
+            throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
         }
 
         return new AstPostfixExpression(operator, lhs);
@@ -788,8 +788,11 @@ class Parser {
             TokenType.T_OPERATOR_MINUS,
         ]);
 
+        // console.log("ft is:", this.front());
+        // let operator: Token | null = this.front();
+
         if (operator === null) {
-            throw new Error(`Unexpected token ${this.frontType()}`);
+            throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
         }
 
         let rhs: Ast = this.parseExpression(min_bp);
@@ -836,18 +839,19 @@ class Parser {
         let result: Ast | null = null;
 
         const ft = this.frontType();
+        console.log("parseExpression: ft is:", TokenType[ft]);
         if (ft === TokenType.T_NUMBER) {
-            console.log("ft is number\n");
             result = this.parseExpressionLiteral();   
         } else if (ft === TokenType.T_PARENTHESIS_OPEN) {
             result = this.parseSubExpression();
-        } else if (ft === TokenType.T_IDENTIFIER) {
-            return this.parseIdentifier();
+        // } else if (ft === TokenType.T_IDENTIFIER) {
+        //     return this.parseIdentifier();
         } else if (this.has(TokenType.T_OPERATOR_PLUS) || this.has(TokenType.T_OPERATOR_MINUS)) {
             result = this.parsePrefixExpression(this.prefix_bp_lookup(ft));
-        } else {
-            throw new Error(`Unexpected token ${TokenType[ft]}`);
         }
+        // else {
+        //     throw new Error(`parseExpression: Unexpected token ${TokenType[ft]}`);
+        // }
 
         console.log("Result is: ", result);
 
