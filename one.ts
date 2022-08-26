@@ -693,7 +693,7 @@ class Parser {
             } else if(this.has(TokenType.T_IF)) {
                 alternate = this.parseStatement();
             } else {
-                throw new Error(`Unexpected token ${this.frontType()} in else statement`);
+                throw new Error(`Unexpected token ${TokenType[this.frontType()]} in else statement`);
             }
         }
         return new AstIfStatement(test, consequent, alternate);
@@ -721,7 +721,7 @@ class Parser {
         }
 
         if (res === null) {
-            throw new Error(`Unexpected token ${this.frontType()}`);
+            throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
             return null;
         }
         return res;
@@ -836,7 +836,6 @@ class Parser {
         let result: Ast | null = null;
 
         const ft = this.frontType();
-        console.log("===>", ft, TokenType[ft]);
         if (ft === TokenType.T_NUMBER) {
             console.log("ft is number\n");
             result = this.parseExpressionLiteral();   
@@ -850,23 +849,27 @@ class Parser {
             throw new Error(`Unexpected token ${TokenType[ft]}`);
         }
 
+        console.log("Result is: ", result);
+
         assert(result != null); // We should always have either a LHS or Prefix Operator at this point.
 
-        while(binding_power_to_my_right < this.bp_lookup(this.frontType()).left_power ) {
+        console.log(binding_power_to_my_right);
+        console.log(this.bp_lookup(this.frontType()).left_power);
+
+        while(binding_power_to_my_right < this.bp_lookup(this.frontType()).left_power) {
             // Is it a postfix expression?
             if (this.has(TokenType.T_OPERATOR_BANG)) {
                 result = this.parsePostfixExpression(result);
             } else if (this.has(TokenType.T_OPERATOR_QUESTION)) {
-                result = this.parseTernaryExpression(result)
+                result = this.parseTernaryExpression(result);
             } else {
                 // It must be a binary expression
                 result = this.parseBinaryExpression(result, this.bp_lookup(this.frontType()).right_power);
             }
         }
 
-        
         assert(result != null); // This factory should always return an expression tree fragment
-        return result as AstExpression;
+        return result;
     }
 
     parseStatement(): Ast | null {
@@ -944,7 +947,7 @@ function main(): void
     // const source_code = "echo age;a.b.c";
     // const source_code = "echo age;a.b.c; age = 50;if(5>2){echo 1;}";//  else {echo 2;}";
     // const source_code = "if(5){echo 1;} else {echo 2;} if(5) ;";
-    const source_code = "echo 110;";
+    const source_code = "echo 110*10;";
     input.setData(source_code);
     console.log(input);
 
