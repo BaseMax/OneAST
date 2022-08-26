@@ -727,6 +727,35 @@ class Parser {
         return res;
     }
 
+    skipOneOf(tokens: Array<TokenType>): boolean {
+        let count: number = 0;
+        
+        for (let i = 0; i < tokens.length; i++) {
+            if (this.frontType() === tokens[i]) {
+                count++;
+                this.goNextToken();
+                break;
+            }
+        }
+
+        if (count === 0) return false;
+        return true;
+    }
+
+    skipAsMuchAs(tokens: Array<TokenType>): boolean {
+        let count: number = 0;
+
+        for (let i = 0; i < tokens.length; i++) {
+            if (this.frontType() === tokens[i]) {
+                count++;
+                this.goNextToken();
+            }
+        }
+
+        if (count === 0) return false;
+        return true;
+    }
+
     parsePrefixExpression(min_bp: number): Ast {
         let operator: Token | null = this.expectOneOf([
             TokenType.T_OPERATOR_PLUS,
