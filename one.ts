@@ -836,11 +836,13 @@ class Parser {
         let result: Ast | null = null;
 
         const ft = this.frontType();
+        console.log("===>", ft, TokenType[ft]);
         if (ft === TokenType.T_NUMBER) {
+            console.log("ft is number\n");
             result = this.parseExpressionLiteral();   
         } else if (ft === TokenType.T_PARENTHESIS_OPEN) {
             result = this.parseSubExpression();
-        } if (ft === TokenType.T_IDENTIFIER) {
+        } else if (ft === TokenType.T_IDENTIFIER) {
             return this.parseIdentifier();
         } else if (this.has(TokenType.T_OPERATOR_PLUS) || this.has(TokenType.T_OPERATOR_MINUS)) {
             result = this.parsePrefixExpression(this.prefix_bp_lookup(ft));
@@ -869,16 +871,13 @@ class Parser {
 
     parseStatement(): Ast | null {
         const ft = this.frontType();
-        if (ft === TokenType.T_WHITESPACE) {
-            this.goNextToken();
-            return null;
-        } else if (ft === TokenType.T_SEMICOLON) {
+        if (ft === TokenType.T_WHITESPACE || ft === TokenType.T_SEMICOLON) {
             this.goNextToken();
             return null;
         } else if (ft === TokenType.T_IF) {
             return this.parseIf();
         } else if (ft === TokenType.T_ECHO) {
-            return this.parseExpression();
+            return this.parseEcho();
         } else if (ft === TokenType.T_IDENTIFIER) {
             return this.parseExpression();
         } else {
@@ -887,7 +886,7 @@ class Parser {
     }
 
     frontType(): TokenType {
-        console.log(this.index, this.tokens[this.index]);
+        // console.log(this.index, this.tokens[this.index]);
         return this.tokens[this.index].type;
     }
     
@@ -944,7 +943,8 @@ function main(): void
     // const source_code = "age = 50;";
     // const source_code = "echo age;a.b.c";
     // const source_code = "echo age;a.b.c; age = 50;if(5>2){echo 1;}";//  else {echo 2;}";
-    const source_code = "if(5){echo 1;} else {echo 2;} if(5) ;";
+    // const source_code = "if(5){echo 1;} else {echo 2;} if(5) ;";
+    const source_code = "echo 110;";
     input.setData(source_code);
     console.log(input);
 
