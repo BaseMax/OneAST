@@ -60,6 +60,25 @@ enum TokenType {
     T_OPERATOR_EQUAL = 14,
     T_OPERATOR_DOT = 15,
 
+    // >
+    // <
+    // >=
+    // <=
+    // ==
+    // !=
+    // &&
+    // ||
+    // !
+    T_OPERATOR_GREATER = 16,
+    T_OPERATOR_LESS = 17,
+    T_OPERATOR_GREATER_EQUAL = 18,
+    T_OPERATOR_LESS_EQUAL = 19,
+    T_OPERATOR_EQUAL_EQUAL = 20,
+    T_OPERATOR_NOT_EQUAL = 21,
+    T_OPERATOR_AND = 22,
+    T_OPERATOR_OR = 23,
+    T_OPERATOR_NOT = 24,
+
     T_ECHO,
     T_IF,
     T_ELSE,
@@ -208,9 +227,46 @@ class Lexer {
             this.nextIndex(1);
             return this.createToken(TokenType.T_CLOSE_BRACE);
         }
+        // T_OPERATOR_GREATER = 16,
+        // T_OPERATOR_LESS = 17,
+        // T_OPERATOR_GREATER_EQUAL = 18,
+        // T_OPERATOR_LESS_EQUAL = 19,
+        // T_OPERATOR_EQUAL_EQUAL = 20,
+        // T_OPERATOR_NOT_EQUAL = 21,
+        // T_OPERATOR_AND = 22,
+        // T_OPERATOR_OR = 23,
+        // T_OPERATOR_NOT = 24,
+        if (c === ">") {
+            this.nextIndex(1);
+            if (this.getChar() === "=") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_GREATER_EQUAL);
+            }
+            return this.createToken(TokenType.T_OPERATOR_GREATER);
+        }
+        if (c === "<") {
+            this.nextIndex(1);
+            if (this.getChar() === "=") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_LESS_EQUAL);
+            }
+            return this.createToken(TokenType.T_OPERATOR_LESS);
+        }
         if (c === "=") {
             this.nextIndex(1);
+            if (this.getChar() === "=") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_EQUAL_EQUAL);
+            }
             return this.createToken(TokenType.T_OPERATOR_EQUAL);
+        }
+        if (c === "!") {
+            this.nextIndex(1);
+            if (this.getChar() === "=") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_NOT_EQUAL);
+            }
+            return this.createToken(TokenType.T_OPERATOR_NOT);
         }
         if (c === ",") {
             this.nextIndex(1);
@@ -540,6 +596,7 @@ class Parser {
     }
 
     parseBlock(): Ast {
+        console.log("parseBlock: ", this.front());
         this.expect(TokenType.T_OPEN_BRACE);
         this.skip(TokenType.T_WHITESPACE);
         let statements: AstStatement[] = [];
@@ -558,11 +615,19 @@ class Parser {
         this.skip(TokenType.T_WHITESPACE);
 
         let consequent: Ast = this.parseBlock();
+        this.skip(TokenType.T_WHITESPACE);
+
         let alternate: Ast|null = null;
         if (this.skip(TokenType.T_ELSE)) {
             this.skip(TokenType.T_WHITESPACE);
 
-            alternate = this.parseStatement();
+            if (this.has(TokenType.T_OPEN_BRACE)) {
+                alternate = this.parseBlock();
+            } else if(this.has(TokenType.T_IF)) {
+                alternate = this.parseStatement();
+            } else {
+                throw new Error(`Unexpected token ${this.frontType()}`);
+            }
         }
         return new AstIfStatement(test, consequent, alternate);
     }
@@ -663,7 +728,8 @@ function main(): void
     // const source_code = "age = 50;echo age;";
     // const source_code = "age = 50;";
     // const source_code = "echo age;a.b.c";
-    const source_code = "echo age;a.b.c; age = 50;if(1){}";
+    // const source_code = "echo age;a.b.c; age = 50;if(5>2){echo 1;}";//  else {echo 2;}";
+    const source_code = "if(5){echo 1;} else {echo 2;}";
     input.setData(source_code);
     console.log(input);
 
