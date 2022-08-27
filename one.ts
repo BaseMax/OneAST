@@ -777,7 +777,6 @@ class Parser {
             this.skip(TokenType.T_WHITESPACE);
 
             let expr: any = this.parseExpression();
-            console.log(`define ${ident.value} = ${expr}`);
 
             return new AstAssignmentExpression(
                 "=",
@@ -1048,27 +1047,19 @@ class Parser {
         let result: Ast | null = null;
 
         const ft = this.frontType();
-        // console.log("parseExpression: ft is:", TokenType[ft]);
         if (ft === TokenType.T_IDENTIFIER || ft === TokenType.T_NUMBER || ft === TokenType.T_STRING_DOUBLE_QUOTE || ft === TokenType.T_STRING_SINGLE_QUOTE || ft === TokenType.T_TRUE || ft === TokenType.T_FALSE || ft === TokenType.T_NULL || ft === TokenType.T_UNDEFINED) {
             result = this.parseExpressionLiteral();
         } else if (ft === TokenType.T_PARENTHESIS_OPEN) {
             result = this.parseSubExpression();
-        // } else if (ft === TokenType.T_IDENTIFIER) {
-        //     return this.parseIdentifier();
         } else if (this.has(TokenType.T_OPERATOR_PLUS) || this.has(TokenType.T_OPERATOR_MINUS)) {
             result = this.parsePrefixExpression(this.prefix_bp_lookup(ft));
         } else {
             throw new Error(`parseExpression: Unexpected token ${TokenType[ft]}`);
         }
 
-        // console.log("Result is: ", result);
-
         assert(result != null); // We should always have either a LHS or Prefix Operator at this point.
 
         this.skip(TokenType.T_WHITESPACE);
-
-        // console.log(binding_power_to_my_right);
-        // console.log(this.bp_lookup(this.frontType()).left_power);
 
         while(binding_power_to_my_right < this.bp_lookup(this.frontType()).left_power) {
             // Is it a postfix expression?
@@ -1107,28 +1098,21 @@ class Parser {
 
     parseStatement(): Ast | null {
         const ft = this.frontType();
-        console.log("ft:", ft, TokenType[ft]);
         if (ft === TokenType.T_WHITESPACE || ft === TokenType.T_SEMICOLON) {
-            console.log("\t skip");
             this.goNextToken();
             return null;
         } else if (ft === TokenType.T_IF) {
-            console.log("\t if");
             return this.parseIf();
         } else if (ft === TokenType.T_ECHO) {
-            console.log("\t echo");
             return this.parseEcho();
         } else if (this.is_value(ft)) {
-            console.log("\t value");
             return new AstExpressionStatement(this.parseExpression());
         } else {
-            console.log("\t none");
             throw new Error(`Unexpected token ${TokenType[ft]}`);
         }
     }
 
     frontType(): TokenType {
-        // console.log(this.index, this.tokens[this.index]);
         return this.tokens[this.index].type;
     }
     
