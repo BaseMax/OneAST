@@ -65,13 +65,12 @@ enum TokenType {
     T_OPERATOR_MINUS = 11,
     T_OPERATOR_MULTIPLY = 12,
     T_OPERATOR_DIVIDE = 13,
-    T_OPERATOR_EQUAL = 14,
+    T_OPERATOR_ASSIGN = 14,
     T_OPERATOR_DOT = 15,
     T_OPERATOR_COLON = 16,
     T_OPERATOR_QUESTION = 17,
     T_OPERATOR_BANG = 18,
     T_OPERATOR_POWER = 19,
-
 
     // >
     // <
@@ -82,11 +81,11 @@ enum TokenType {
     // &&
     // ||
     // !
-    T_OPERATOR_GREATER = 16,
-    T_OPERATOR_LESS = 17,
-    T_OPERATOR_GREATER_EQUAL = 18,
-    T_OPERATOR_LESS_EQUAL = 19,
-    T_OPERATOR_EQUAL_EQUAL = 20,
+    T_OPERATOR_GREATER_THAN = 16,
+    T_OPERATOR_LESS_THAN = 17,
+    T_OPERATOR_GREATER_THAN_EQUAL = 18,
+    T_OPERATOR_LESS_THAN_EQUAL = 19,
+    T_OPERATOR_ASSIGN_EQUAL = 20,
     T_OPERATOR_NOT_EQUAL = 21,
     T_OPERATOR_AND = 22,
     T_OPERATOR_OR = 23,
@@ -102,6 +101,8 @@ enum TokenType {
 
     T_OPERATOR_BIT_AND = 31,
     T_OPERATOR_BIT_OR = 32,
+
+    T_OPERATOR_MODULO = 33,
 
     T_ECHO,
     T_IF,
@@ -246,6 +247,10 @@ class Lexer {
             this.nextIndex(1);
             return this.createToken(TokenType.T_OPERATOR_DIVIDE);
         }
+        if (c === "%") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_OPERATOR_MODULO);
+        }
         if (c === ".") {
             this.nextIndex(1);
             return this.createToken(TokenType.T_OPERATOR_DOT);
@@ -284,11 +289,11 @@ class Lexer {
             this.nextIndex(1);
             return this.createToken(TokenType.T_STRING_DOUBLE_QUOTE, this.readStringDouble());
         }
-        // T_OPERATOR_GREATER = 16,
-        // T_OPERATOR_LESS = 17,
-        // T_OPERATOR_GREATER_EQUAL = 18,
-        // T_OPERATOR_LESS_EQUAL = 19,
-        // T_OPERATOR_EQUAL_EQUAL = 20,
+        // T_OPERATOR_GREATER_THAN = 16,
+        // T_OPERATOR_LESS_THAN = 17,
+        // T_OPERATOR_GREATER_THAN_EQUAL = 18,
+        // T_OPERATOR_LESS_THAN_EQUAL = 19,
+        // T_OPERATOR_ASSIGN_EQUAL = 20,
         // T_OPERATOR_NOT_EQUAL = 21,
         // T_OPERATOR_AND = 22,
         // T_OPERATOR_OR = 23,
@@ -297,25 +302,25 @@ class Lexer {
             this.nextIndex(1);
             if (this.getChar() === "=") {
                 this.nextIndex(1);
-                return this.createToken(TokenType.T_OPERATOR_GREATER_EQUAL);
+                return this.createToken(TokenType.T_OPERATOR_GREATER_THAN_EQUAL);
             }
-            return this.createToken(TokenType.T_OPERATOR_GREATER);
+            return this.createToken(TokenType.T_OPERATOR_GREATER_THAN);
         }
         if (c === "<") {
             this.nextIndex(1);
             if (this.getChar() === "=") {
                 this.nextIndex(1);
-                return this.createToken(TokenType.T_OPERATOR_LESS_EQUAL);
+                return this.createToken(TokenType.T_OPERATOR_LESS_THAN_EQUAL);
             }
-            return this.createToken(TokenType.T_OPERATOR_LESS);
+            return this.createToken(TokenType.T_OPERATOR_LESS_THAN);
         }
         if (c === "=") {
             this.nextIndex(1);
             if (this.getChar() === "=") {
                 this.nextIndex(1);
-                return this.createToken(TokenType.T_OPERATOR_EQUAL_EQUAL);
+                return this.createToken(TokenType.T_OPERATOR_ASSIGN_EQUAL);
             }
-            return this.createToken(TokenType.T_OPERATOR_EQUAL);
+            return this.createToken(TokenType.T_OPERATOR_ASSIGN);
         }
         if (c === "|") {
             this.nextIndex(1);
@@ -653,7 +658,7 @@ class AstEmptyStatement implements Ast {
 }
 
 class AstBlock implements Ast {
-    kind: string = "Block";
+    kind: string = "BlockStatement";
     statements: Array<Ast>;
 
     constructor(statements: Array<Ast>) {
@@ -684,7 +689,6 @@ class Interpreter {
     interpret(): string {
         let code = "";
 
-        console.log(this.ast);
         assert(this.ast.kind === "Program");
 
         if (this.ast.errors.length > 0) {
@@ -703,6 +707,88 @@ class Interpreter {
         return code;
     }
 
+    interpretBinaryExpression(expression: AstBinaryExpression): string {
+        let code = "";
+
+        switch (expression.operator.type) {
+            case TokenType.T_OPERATOR_PLUS:
+                code += this.interpretExpression(expression.left) + " + " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_MINUS:
+                code += this.interpretExpression(expression.left) + " - " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_MULTIPLY:
+                code += this.interpretExpression(expression.left) + " * " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_DIVIDE:
+                code += this.interpretExpression(expression.left) + " / " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_MODULO:
+                code += this.interpretExpression(expression.left) + " % " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_ASSIGN:
+                code += this.interpretExpression(expression.left) + " == " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_NOT_EQUAL:
+                code += this.interpretExpression(expression.left) + " != " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_LESS_THAN_THAN:
+                code += this.interpretExpression(expression.left) + " < " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_LESS_THAN_THAN_EQUAL:
+                code += this.interpretExpression(expression.left) + " <= " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_GREATER_THAN_THAN:
+                code += this.interpretExpression(expression.left) + " > " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_GREATER_THAN_THAN_EQUAL:
+                code += this.interpretExpression(expression.left) + " >= " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_AND:
+                code += this.interpretExpression(expression.left) + " && " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_OR:
+                code += this.interpretExpression(expression.left) + " || " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_ASSIGN:
+                code += this.interpretExpression(expression.left) + " = " + this.interpretExpression(expression.right);
+                break;
+            // case TokenType.T_OPERATOR_ASSIGN_ADD:
+            //     code += this.interpretExpression(expression.left) + " += " + this.interpretExpression(expression.right);
+            //     break;
+            // case TokenType.T_OPERATOR_ASSIGN_SUBTRACT:
+            //     code += this.interpretExpression(expression.left) + " -= " + this.interpretExpression(expression.right);
+            //     break;
+            // case TokenType.T_OPERATOR_ASSIGN_MULTIPLY:
+            //     code += this.interpretExpression(expression.left) + " *= " + this.interpretExpression(expression.right);
+            //     break;
+            // case TokenType.T_OPERATOR_ASSIGN_DIVIDE:
+            //     code += this.interpretExpression(expression.left) + " /= " + this.interpretExpression(expression.right);
+            //     break;
+            // case TokenType.T_OPERATOR_ASSIGN_MODULO:
+            //     code += this.interpretExpression(expression.left) + " %= " + this.interpretExpression(expression.right);
+            //     break;
+            // case TokenType.T_OPERATOR_ASSIGN_BIT_AND:
+            //     code += this.interpretExpression(expression.left) + " &= " + this.interpretExpression(expression.right);
+            //     break;
+            // case TokenType.T_OPERATOR_ASSIGN_BIT_OR:
+            //     code += this.interpretExpression(expression.left) + " |= " + this.interpretExpression(expression.right);
+            //     break;
+            // case TokenType.T_OPERATOR_ASSIGN_BIT_XOR:
+            //     code += this.interpretExpression(expression.left) + " ^= " + this.interpretExpression(expression.right);
+            //     break;
+            // case TokenType.T_OPERATOR_ASSIGN_BIT_LEFT_SHIFT:
+            //     code += this.interpretExpression(expression.left) + " <<= " + this.interpretExpression(expression.right);
+            //     break;
+            // case TokenType.T_OPERATOR_ASSIGN_BIT_RIGHT_SHIFT:
+            //     code += this.interpretExpression(expression.left) + " >>= " + this.interpretExpression(expression.right);
+            //     break;
+        }
+        
+
+        return code;
+    }
+
     interpretExpression(expression: Ast): string {
         // console.log(expression);
 
@@ -711,6 +797,8 @@ class Interpreter {
                 return (expression as AstIdentifier).name;
             case "LiteralExpression":
                 return (expression as AstLiteralExpression).value;
+            case "BinaryExpression":
+                return this.interpretBinaryExpression(expression as AstBinaryExpression);
             default:
                 throw new Error("Unsupported expression: " + expression.kind);
         }
@@ -766,14 +854,16 @@ class Interpreter {
             if (statement.alternate.kind !== "IfStatement" && statement.alternate.kind !== "BlockStatement" && statement.alternate.kind !== "EmptyStatement") {
                 throw new Error("Unsupported statement: " + statement.alternate.kind);
             }
+            
+            if (statement.alternate.kind === "BlockStatement") code += "{ ";
             code += this.interpretStatement(statement.alternate as AstBlock);
+            if (statement.alternate.kind === "BlockStatement") code += "}";
         }
 
         return code;
     }
 
     interpretBlock(block: AstBlock): string {
-        console.log("===>", block);
         let code = "";
 
         code += "{";
@@ -814,7 +904,7 @@ class Parser {
         let ident: Token = this.expect(TokenType.T_IDENTIFIER);
         this.skip(TokenType.T_WHITESPACE);
 
-        if (this.skip(TokenType.T_OPERATOR_EQUAL)) {
+        if (this.skip(TokenType.T_OPERATOR_ASSIGN)) {
             this.skip(TokenType.T_WHITESPACE);
 
             let expr: any = this.parseExpression();
@@ -1081,11 +1171,11 @@ class Parser {
             case TokenType.T_OPERATOR_POWER: return this.RightAssociative(99);
             case TokenType.T_OPERATOR_QUESTION: return this.RightAssociative(1000);
 
-            case TokenType.T_OPERATOR_GREATER: return this.LeftAssociative(50);
-            case TokenType.T_OPERATOR_GREATER_EQUAL: return this.LeftAssociative(50);
-            case TokenType.T_OPERATOR_LESS: return this.LeftAssociative(50);
-            case TokenType.T_OPERATOR_LESS_EQUAL: return this.LeftAssociative(50);
-            case TokenType.T_OPERATOR_EQUAL_EQUAL: return this.LeftAssociative(50);
+            case TokenType.T_OPERATOR_GREATER_THAN: return this.LeftAssociative(50);
+            case TokenType.T_OPERATOR_GREATER_THAN_EQUAL: return this.LeftAssociative(50);
+            case TokenType.T_OPERATOR_LESS_THAN: return this.LeftAssociative(50);
+            case TokenType.T_OPERATOR_LESS_THAN_EQUAL: return this.LeftAssociative(50);
+            case TokenType.T_OPERATOR_ASSIGN_EQUAL: return this.LeftAssociative(50);
             case TokenType.T_OPERATOR_NOT_EQUAL: return this.LeftAssociative(50);
 
             // --- Postfix --- (Always Right Associative)
