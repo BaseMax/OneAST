@@ -1292,22 +1292,11 @@ class Parser {
         if (operator === null) {
             throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
         }
+        this.skipWhitespace();
 
-        // console.log("Binary Expression Prev:", this.front());
-        // this.goNextToken();
-        // console.log("Binary Expression:", operator);
-        // console.log("Binary Expression Current:", this.front());
+        let rhs: Ast = this.parseExpression(min_bp);
 
-        // if (operator.type === TokenType.T_PARENTHESIS_OPEN) {
-        //     let exprs: Array<Ast> = this.parseExpressions();
-        //     this.expect(TokenType.T_PARENTHESIS_CLOSE);
-
-        //     return new AstCallExpression(lhs, exprs);
-        // } else {
-            let rhs: Ast = this.parseExpression(min_bp);
-
-            return new AstBinaryExpression(operator, lhs, rhs);
-        // }
+        return new AstBinaryExpression(operator, lhs, rhs);
     }
 
     LeftAssociative(priority: number): binding_power {
@@ -1324,8 +1313,6 @@ class Parser {
         console.log(`bp_lookup: ${whichOperator}, ${TokenType[whichOperator]}`);
         switch (whichOperator) {
             case TokenType.T_OPERATOR_DOT: return this.RightAssociative(99);
-            // case TokenType.T_PARENTHESIS_OPEN: return this.LeftAssociative(9999);
-
             case TokenType.T_OPERATOR_AND: return this.LeftAssociative(300);
             case TokenType.T_OPERATOR_OR: return this.LeftAssociative(400);
 
@@ -1347,8 +1334,6 @@ class Parser {
             case TokenType.T_OPERATOR_ASSIGN_EQUAL: return this.LeftAssociative(50);
             case TokenType.T_OPERATOR_NOT_EQUAL: return this.LeftAssociative(50);
             
-            // case TokenType.T_PARENTHESIS_OPEN: return this.LeftAssociative(900);
-
             // --- Postfix --- (Always Right Associative)
             case TokenType.T_OPERATOR_BANG: return this.RightAssociative(400);
             // Note: Postfix operators are always RightAssociative
@@ -1407,7 +1392,7 @@ class Parser {
                 console.log(`Adding ${TokenType[this.frontType()]} to ${result.kind}`);
                 result = this.parseBinaryExpression(result, this.bp_lookup(this.frontType()).right_power);
             }
-            this.skipWhitespace();
+            this.skipWhitespace(); // Maybe we need to skip whitespace inside the loop
         }
 
         // this.skipWhitespace();
