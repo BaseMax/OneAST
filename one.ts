@@ -1385,8 +1385,6 @@ class Parser {
                 result = this.parsePostfixExpression(result);
             } else if (this.has(TokenType.T_OPERATOR_QUESTION)) {
                 result = this.parseTernaryExpression(result);
-            // } else if (this.frontType() === TokenType.T_PARENTHESIS_OPEN || this.frontType() === TokenType.T_PARENTHESIS_CLOSE) {
-            //     break;
             } else {
                 // It must be a binary expression
                 console.log(`Adding ${TokenType[this.frontType()]} to ${result.kind}`);
@@ -1394,18 +1392,6 @@ class Parser {
             }
             this.skipWhitespace(); // Maybe we need to skip whitespace inside the loop
         }
-
-        // this.skipWhitespace();
-
-        // if (this.skip(TokenType.T_PARENTHESIS_OPEN)) {
-        //     this.skipWhitespace();
-
-        //     const exprs: Array<Ast> = this.parseExpressions();
-
-        //     this.expect(TokenType.T_PARENTHESIS_CLOSE);
-
-        //     result = new AstCallExpression(result, exprs);
-        // }
 
         assert(result != null); // This factory should always return an expression tree fragment
         return result;
