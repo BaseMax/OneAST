@@ -392,6 +392,16 @@ class Ast {
     kind: string = "";
 }
 
+class AstExpressionStatement extends Ast {
+    kind: string = "expression_statement";
+    expression: Ast;
+
+    constructor(expression: Ast) {
+        super();
+        this.expression = expression;
+    }
+}
+
 class AstStatement implements Ast {
     kind: string = "Statement";
 }
@@ -869,7 +879,7 @@ class Parser {
         let result: Ast | null = null;
 
         const ft = this.frontType();
-        console.log("parseExpression: ft is:", TokenType[ft]);
+        // console.log("parseExpression: ft is:", TokenType[ft]);
         if (ft === TokenType.T_NUMBER) {
             result = this.parseExpressionLiteral();   
         } else if (ft === TokenType.T_PARENTHESIS_OPEN) {
@@ -878,17 +888,16 @@ class Parser {
         //     return this.parseIdentifier();
         } else if (this.has(TokenType.T_OPERATOR_PLUS) || this.has(TokenType.T_OPERATOR_MINUS)) {
             result = this.parsePrefixExpression(this.prefix_bp_lookup(ft));
-        }
-        else {
+        } else {
             throw new Error(`parseExpression: Unexpected token ${TokenType[ft]}`);
         }
 
-        console.log("Result is: ", result);
+        // console.log("Result is: ", result);
 
         assert(result != null); // We should always have either a LHS or Prefix Operator at this point.
 
-        console.log(binding_power_to_my_right);
-        console.log(this.bp_lookup(this.frontType()).left_power);
+        // console.log(binding_power_to_my_right);
+        // console.log(this.bp_lookup(this.frontType()).left_power);
 
         while(binding_power_to_my_right < this.bp_lookup(this.frontType()).left_power) {
             // Is it a postfix expression?
@@ -915,8 +924,8 @@ class Parser {
             return this.parseIf();
         } else if (ft === TokenType.T_ECHO) {
             return this.parseEcho();
-        } else if (ft === TokenType.T_IDENTIFIER) {
-            return this.parseExpression();
+        } else if (ft === TokenType.T_IDENTIFIER || ft === TokenType.T_NUMBER) {
+            return new AstExpressionStatement(this.parseExpression());
         } else {
             throw new Error(`Unexpected token ${TokenType[ft]}`);
         }
@@ -981,7 +990,10 @@ function main(): void
     // const source_code = "echo age;a.b.c";
     // const source_code = "echo age;a.b.c; age = 50;if(5>2){echo 1;}";//  else {echo 2;}";
     // const source_code = "if(5){echo 1;} else {echo 2;} if(5) ;";
-    const source_code = "echo 110*10;";
+    // const source_code = "echo 110*10;";
+    // const source_code = "echo 110*10+10;";
+    // const source_code = "echo 10+110*10;";
+    const source_code = "10+110*10;";
     input.setData(source_code);
     console.log(input);
 
