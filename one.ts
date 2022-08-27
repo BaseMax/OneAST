@@ -194,6 +194,9 @@ class Lexer {
             const token = this.nextToken();
             this.tokens.push(token);
         }
+
+        this.tokens.push(new Token(TokenType.T_EOF, this.location));
+
         this.location.start_location = new Location(0, 0, 1);
     }
 
@@ -676,64 +679,77 @@ class Interpreter {
         this.ast = ast;
     }
 
-    interpret(): void {
+    interpret(): string {
+        let code = "";
+
         console.log(this.ast);
         assert(this.ast.kind === "Program");
 
         if (this.ast.errors.length > 0) {
             throw new Error("Parse error: " + this.ast.errors.join(", "));
-            return;
+            return "";
         }
 
-        this.interpretStatements(this.ast.body);
+        return this.interpretStatements(this.ast.body);
     }
 
-    interpretStatements(statements: AstStatement[]): void {
+    interpretStatements(statements: AstStatement[]): string {
+        let code = "";
         for (let statement of statements) {
-            this.interpretStatement(statement);
+            code += this.interpretStatement(statement);
+        }
+        return code;
+    }
+
+    interpretExpression(expression: Ast): string {
+        let code = "";
+        // console.log(expression);
+        switch (expression.kind) {
+            case "LiteralExpression":
+                return (expression as AstLiteralExpression).value;
+            default:
+                throw new Error("Unsupported expression: " + expression.kind);
         }
     }
 
-    interpretStatement(statement: AstStatement): void {
+    interpretCallExpression(statement: Ast): string {
+        let code = "";
+        
+        console.log(statement);
+        // let callee = this.interpretExpression(callExpression.callee);
+        // let args = callExpression.arguments.map(arg => this.interpretExpression(arg));
+        // callee.call(this, args);
+
+        // code += "call " + statement.callee.name;
+        code += "(";
+        // code += statement.arguments.map(arg => this.interpretExpression(arg)).join(", ");
+        code += ");\n";
+        return code;
+    }
+
+    interpretStatement(statement: AstStatement): string {
+        console.log(statement.kind);
         switch (statement.kind) {
             case "ExpressionStatement":
-                // this.interpretExpressionStatement(statement);
+                // return this.interpretExpressionStatement(statement);
+                break;
+            case "CallExpression":
+                return this.interpretCallExpression(statement);
                 break;
             case "BlockStatement":
-                // this.interpretBlockStatement(statement);
+                // return this.interpretBlockStatement(statement);
                 break;
             case "IfStatement":
-                // this.interpretIfStatement(statement);
+                // return this.interpretIfStatement(statement);
                 break;
             case "EmptyStatement":
-                // this.interpretEmptyStatement(statement);
+                // return this.interpretEmptyStatement(statement);
                 break;
             default:
                 throw new Error("Unknown statement kind: " + statement.kind);
         }
+        return "";
     }
-
-    // interpretExpression(expression: Ast): any {
-    //     switch (expression.kind) {
-    //         case "Identifier":
-    //             return this.interpretIdentifier(expression);
-    //         case "LiteralExpression":
-    //             return this.interpretLiteralExpression(expression);
-    //         case "BinaryExpression":
-    //             return this.interpretBinaryExpression(expression);
-    //         case "UnaryExpression":
-    //             return this.interpretUnaryExpression(expression);
-    //         case "CallExpression":
-    //             return this.interpretCallExpression(expression);
-    //         case "MemberExpression":
-    //             return this.interpretMemberExpression(expression);
-    //         case "ConditionalExpression":
-    //             return this.interpretConditionalExpression(expression);
-    //         default:
-    //             throw new Error("Unknown expression kind: " + expression.kind);
-    //     }
-    // }
-
 
     interpretIfStatement(statement: AstIfStatement): void {
         // this.interpretExpression(statement.test);
@@ -796,14 +812,26 @@ class Parser {
     }
 
     parseEcho(): Ast {
+        let has_parent = false;
+
         this.expect(TokenType.T_ECHO);
         this.skip(TokenType.T_WHITESPACE);
 
-        let expr: any = this.parseExpression();
+        if (this.skip(TokenType.T_PARENTHESIS_OPEN)) {
+            has_parent = true;
+            this.skip(TokenType.T_WHITESPACE);
+        }
+
+        let exprs: Array<any> = this.parseExpressions();
+
+        if (has_parent) {
+            this.skip(TokenType.T_WHITESPACE);
+            this.expect(TokenType.T_PARENTHESIS_CLOSE);
+        }
 
         return new AstCallExpression(
             new AstIdentifier("echo"),
-            [ expr ]
+            exprs,
         );
     }
 
@@ -893,7 +921,7 @@ class Parser {
         }
 
         if (res === null) {
-            throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
+            throw new Error(`Unexpected token ${TokenType[this.frontType()]} instead of ${tokens.map(t => TokenType[t]).join(" or ")}`);
         }
         return res;
     }
@@ -1043,6 +1071,24 @@ class Parser {
         }
     }
 
+    parseExpressions(): Array<Ast> {
+        let expressions: Array<Ast> = [];
+
+        while (!this.isEOF()) {
+            expressions.push(this.parseExpression());
+            this.skip(TokenType.T_WHITESPACE);
+
+            if (this.has(TokenType.T_PARENTHESIS_CLOSE)) {
+                break;
+            } else {
+                this.expect(TokenType.T_COMMA);
+                this.skip(TokenType.T_WHITESPACE);
+            }
+        }
+
+        return expressions;
+    }
+
     parseExpression(binding_power_to_my_right: number = 0): Ast {
         let result: Ast | null = null;
 
@@ -1098,7 +1144,7 @@ class Parser {
 
     parseStatement(): Ast | null {
         const ft = this.frontType();
-        if (ft === TokenType.T_WHITESPACE || ft === TokenType.T_SEMICOLON) {
+        if (ft === TokenType.T_EOF || ft === TokenType.T_WHITESPACE || ft === TokenType.T_SEMICOLON) {
             this.goNextToken();
             return null;
         } else if (ft === TokenType.T_IF) {
@@ -1176,7 +1222,8 @@ function main(): void
     // const source_code = "10+110*10;";
     // const source_code = "'hey';";
     // const source_code = "   true   ;   ";
-    const source_code = "   true and true;   ";
+    // const source_code = "   true and true or (false);   ";
+    const source_code = "echo(10, 20, 30);";
     input.setData(source_code);
     console.log(input);
 
@@ -1198,7 +1245,8 @@ function main(): void
 
     // =============== Interpreter =================
     const interpreter = new Interpreter(ast);
-    interpreter.interpret();
+    const code = interpreter.interpret();
+    console.log(code);
 
     // =============== Compiler =================
 
