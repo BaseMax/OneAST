@@ -92,6 +92,9 @@ enum TokenType {
     T_OPERATOR_OR = 23,
     T_OPERATOR_NOT = 24,
 
+    T_STRING_SINGLE_QUOTE = 25,
+    T_STRING_DOUBLE_QUOTE = 26,
+
     T_ECHO,
     T_IF,
     T_ELSE,
@@ -252,6 +255,16 @@ class Lexer {
             this.nextIndex(1);
             return this.createToken(TokenType.T_CLOSE_BRACE);
         }
+        // T_STRING_SINGLE_QUOTE
+        if (c === "'") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_STRING_SINGLE_QUOTE, this.readStringSingle());
+        }
+        // T_STRING_DOUBLE_QUOTE
+        if (c === "\"") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_STRING_DOUBLE_QUOTE, this.readStringDouble());
+        }
         // T_OPERATOR_GREATER = 16,
         // T_OPERATOR_LESS = 17,
         // T_OPERATOR_GREATER_EQUAL = 18,
@@ -304,6 +317,32 @@ class Lexer {
             return this.readIdentifier();
         }
         return this.createToken(TokenType.T_ERROR, `Unexpected character ${c}`);
+    }
+
+    readStringSingle(): string {
+        let s = "";
+        let c = this.getChar();
+        while (c !== "'") {
+            s += c;
+            this.nextIndex(1);
+            c = this.getChar();
+        }
+
+        this.nextIndex(1); // skip last quote
+        return s;
+    }
+
+    readStringDouble(): string {
+        let s = "";
+        let c = this.getChar();
+        while (c !== "\"") {
+            s += c;
+            this.nextIndex(1);
+            c = this.getChar();
+        }
+
+        this.nextIndex(1); // skip last quote
+        return s;
     }
 
     isDigit(c: string): boolean {
@@ -664,6 +703,12 @@ class Parser {
         if (ft === TokenType.T_NUMBER) {
             const t: Token = this.expect(TokenType.T_NUMBER);
             return new AstLiteralExpression("number", t.value);
+        } else if (ft === TokenType.T_STRING_DOUBLE_QUOTE) {
+            const t: Token = this.expect(TokenType.T_STRING_DOUBLE_QUOTE);
+            return new AstLiteralExpression("string_double", t.value);
+        } else if (ft === TokenType.T_STRING_SINGLE_QUOTE) {
+            const t: Token = this.expect(TokenType.T_STRING_SINGLE_QUOTE);
+            return new AstLiteralExpression("string_single", t.value);
         } else {
             throw new Error(`Unexpected token ${ft}`);
         }
@@ -880,8 +925,8 @@ class Parser {
 
         const ft = this.frontType();
         // console.log("parseExpression: ft is:", TokenType[ft]);
-        if (ft === TokenType.T_NUMBER) {
-            result = this.parseExpressionLiteral();   
+        if (ft === TokenType.T_NUMBER || ft === TokenType.T_STRING_DOUBLE_QUOTE || ft === TokenType.T_STRING_SINGLE_QUOTE) {
+            result = this.parseExpressionLiteral();
         } else if (ft === TokenType.T_PARENTHESIS_OPEN) {
             result = this.parseSubExpression();
         // } else if (ft === TokenType.T_IDENTIFIER) {
@@ -924,7 +969,7 @@ class Parser {
             return this.parseIf();
         } else if (ft === TokenType.T_ECHO) {
             return this.parseEcho();
-        } else if (ft === TokenType.T_IDENTIFIER || ft === TokenType.T_NUMBER) {
+        } else if (ft === TokenType.T_IDENTIFIER || ft === TokenType.T_NUMBER || ft === TokenType.T_OPERATOR_BANG || ft === TokenType.T_PARENTHESIS_OPEN || ft === TokenType.T_STRING_DOUBLE_QUOTE || ft === TokenType.T_STRING_SINGLE_QUOTE || ft === TokenType.T_OPERATOR_PLUS || ft === TokenType.T_OPERATOR_MINUS) {
             return new AstExpressionStatement(this.parseExpression());
         } else {
             throw new Error(`Unexpected token ${TokenType[ft]}`);
@@ -993,7 +1038,8 @@ function main(): void
     // const source_code = "echo 110*10;";
     // const source_code = "echo 110*10+10;";
     // const source_code = "echo 10+110*10;";
-    const source_code = "10+110*10;";
+    // const source_code = "10+110*10;";
+    const source_code = "'hey';";
     input.setData(source_code);
     console.log(input);
 
