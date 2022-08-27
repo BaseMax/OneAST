@@ -732,16 +732,16 @@ class Interpreter {
             case TokenType.T_OPERATOR_NOT_EQUAL:
                 code += this.interpretExpression(expression.left) + " != " + this.interpretExpression(expression.right);
                 break;
-            case TokenType.T_OPERATOR_LESS_THAN_THAN:
+            case TokenType.T_OPERATOR_LESS_THAN:
                 code += this.interpretExpression(expression.left) + " < " + this.interpretExpression(expression.right);
                 break;
-            case TokenType.T_OPERATOR_LESS_THAN_THAN_EQUAL:
+            case TokenType.T_OPERATOR_LESS_THAN_EQUAL:
                 code += this.interpretExpression(expression.left) + " <= " + this.interpretExpression(expression.right);
                 break;
-            case TokenType.T_OPERATOR_GREATER_THAN_THAN:
+            case TokenType.T_OPERATOR_GREATER_THAN:
                 code += this.interpretExpression(expression.left) + " > " + this.interpretExpression(expression.right);
                 break;
-            case TokenType.T_OPERATOR_GREATER_THAN_THAN_EQUAL:
+            case TokenType.T_OPERATOR_GREATER_THAN_EQUAL:
                 code += this.interpretExpression(expression.left) + " >= " + this.interpretExpression(expression.right);
                 break;
             case TokenType.T_OPERATOR_AND:
