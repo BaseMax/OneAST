@@ -101,8 +101,28 @@ enum TokenType {
 
     T_OPERATOR_BIT_AND = 31,
     T_OPERATOR_BIT_OR = 32,
+    T_OPERATOR_BIT_XOR,
 
     T_OPERATOR_MODULO = 33,
+
+    T_OPERATOR_ASSIGN_ADD,
+    T_OPERATOR_ASSIGN_SUBTRACT,
+    T_OPERATOR_ASSIGN_MULTIPLY,
+    T_OPERATOR_ASSIGN_DIVIDE,
+    T_OPERATOR_ASSIGN_MODULO,
+    T_OPERATOR_ASSIGN_BIT_AND,
+    T_OPERATOR_ASSIGN_BIT_OR,
+    T_OPERATOR_ASSIGN_BIT_XOR,
+    T_OPERATOR_ASSIGN_BIT_LEFT_SHIFT,
+    T_OPERATOR_ASSIGN_BIT_RIGHT_SHIFT,
+    T_OPERATOR_BIT_LEFT_SHIFT,
+    T_OPERATOR_BIT_RIGHT_SHIFT,
+
+    T_OPERATOR_INCREASEMENT = 34,
+    T_OPERATOR_DECREASEMENT = 35,
+
+    T_INLINE_COMMENT,
+    T_BLOCK_COMMENT,
 
     T_ECHO,
     T_IF,
@@ -201,7 +221,7 @@ class Lexer {
         this.location.start_location = new Location(0, 0, 1);
     }
 
-    nextIndex(n: number) {
+    nextIndex(n: number) { // n maybe negative
         this.location.end_location.offset += n;
         this.location.end_location.index += n;
     }
@@ -212,6 +232,45 @@ class Lexer {
 
     createToken(kind: TokenType, value?: any) {
         return new Token(kind, this.getLocation(), value);
+    }
+
+    readBlockComment(): string {
+        let comment = "";
+        while (!this.isEOF()) {
+            const c = this.getChar();
+            if (c === "\n") {
+                this.nextIndex(1);
+                this.location.end_location.line++;
+                this.location.end_location.offset = 0;
+                break;
+            } else if (c === "*") {
+                this.nextIndex(1);
+                if (this.getChar() === "/") {
+                    this.nextIndex(1);
+                    break;
+                } else {
+                    this.nextIndex(-1);
+                }
+            }
+            comment += c;
+            this.nextIndex(1);
+        }
+        return comment;
+    }
+
+    readInlineComment(): string {
+        let comment = "";
+
+        while (!this.isEOF()) {
+            const ch = this.getChar();
+            if (ch === "\n") {
+                break;
+            }
+            comment += ch;
+            this.nextIndex(1);
+        }
+
+        return comment;
     }
 
     nextToken(): Token {
@@ -229,10 +288,24 @@ class Lexer {
         }
         if (c === "+") {
             this.nextIndex(1);
+            if (this.getChar() === "=") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_ASSIGN_ADD);
+            } else if (this.getChar() === "+") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_INCREASEMENT);
+            }
             return this.createToken(TokenType.T_OPERATOR_PLUS);
         }
         if (c === "-") {
             this.nextIndex(1);
+            if (this.getChar() === "=") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_ASSIGN_SUBTRACT);
+            } else if (this.getChar() === "-") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_DECREASEMENT);
+            }
             return this.createToken(TokenType.T_OPERATOR_MINUS);
         }
         if (c === "*") {
@@ -240,15 +313,32 @@ class Lexer {
             if (this.getChar() === "*") {
                 this.nextIndex(1);
                 return this.createToken(TokenType.T_OPERATOR_POWER);
+            } else if (this.getChar() === "=") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_ASSIGN_MULTIPLY);
             }
             return this.createToken(TokenType.T_OPERATOR_MULTIPLY);
         }
         if (c === "/") {
             this.nextIndex(1);
+            if (this.getChar() === "/") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_INLINE_COMMENT, this.readInlineComment());
+            } else if (this.getChar() === "=") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_ASSIGN_DIVIDE);
+            } else if (this.getChar() === "*") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_BLOCK_COMMENT, this.readBlockComment());
+            }
             return this.createToken(TokenType.T_OPERATOR_DIVIDE);
         }
         if (c === "%") {
             this.nextIndex(1);
+            if (this.getChar() === "=") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_ASSIGN_MODULO);
+            }
             return this.createToken(TokenType.T_OPERATOR_MODULO);
         }
         if (c === ".") {
@@ -303,6 +393,14 @@ class Lexer {
             if (this.getChar() === "=") {
                 this.nextIndex(1);
                 return this.createToken(TokenType.T_OPERATOR_GREATER_THAN_EQUAL);
+            } else if (this.getChar() === "<") {
+                this.nextIndex(1);
+                if (this.getChar() === "=") {
+                    this.nextIndex(1);
+                    return this.createToken(TokenType.T_OPERATOR_ASSIGN_BIT_RIGHT_SHIFT);
+                } else {
+                    return this.createToken(TokenType.T_OPERATOR_BIT_RIGHT_SHIFT);
+                }
             }
             return this.createToken(TokenType.T_OPERATOR_GREATER_THAN);
         }
@@ -311,8 +409,27 @@ class Lexer {
             if (this.getChar() === "=") {
                 this.nextIndex(1);
                 return this.createToken(TokenType.T_OPERATOR_LESS_THAN_EQUAL);
+            } else if (this.getChar() === "<") {
+                this.nextIndex(1);
+                if (this.getChar() === "=") {
+                    this.nextIndex(1);
+                    return this.createToken(TokenType.T_OPERATOR_ASSIGN_BIT_LEFT_SHIFT);
+                } else {
+                    return this.createToken(TokenType.T_OPERATOR_BIT_LEFT_SHIFT);
+                }
+            } else if (this.getChar() === ">") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_NOT_EQUAL);
             }
             return this.createToken(TokenType.T_OPERATOR_LESS_THAN);
+        }
+        if (c === "^") {
+            this.nextIndex(1);
+            if (this.getChar() === "=") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_ASSIGN_BIT_XOR);
+            }
+            return this.createToken(TokenType.T_OPERATOR_BIT_XOR);
         }
         if (c === "=") {
             this.nextIndex(1);
@@ -327,6 +444,9 @@ class Lexer {
             if (this.getChar() === "|") {
                 this.nextIndex(1);
                 return this.createToken(TokenType.T_OPERATOR_OR);
+            } else if (this.getChar() === "=") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_ASSIGN_BIT_OR);
             }
             return this.createToken(TokenType.T_OPERATOR_BIT_OR);
         }
@@ -335,6 +455,9 @@ class Lexer {
             if (this.getChar() === "&") {
                 this.nextIndex(1);
                 return this.createToken(TokenType.T_OPERATOR_AND);
+            } else if (this.getChar() === "=") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_ASSIGN_BIT_AND);
             }
             return this.createToken(TokenType.T_OPERATOR_BIT_AND);
         }
@@ -666,6 +789,17 @@ class AstBlock implements Ast {
     }
 }
 
+class AstInlineComment implements Ast {
+    kind: string = "InlineComment";
+    comment: string;
+    location: Location;
+
+    constructor(comment: string, location: Location) {
+        this.comment = comment;
+        this.location = location;
+    }
+}
+
 class AstProgram implements Ast {
     kind: string = "Program";
     body: AstStatement[];
@@ -726,7 +860,7 @@ class Interpreter {
             case TokenType.T_OPERATOR_MODULO:
                 code += this.interpretExpression(expression.left) + " % " + this.interpretExpression(expression.right);
                 break;
-            case TokenType.T_OPERATOR_ASSIGN:
+            case TokenType.T_OPERATOR_ASSIGN_EQUAL:
                 code += this.interpretExpression(expression.left) + " == " + this.interpretExpression(expression.right);
                 break;
             case TokenType.T_OPERATOR_NOT_EQUAL:
@@ -753,36 +887,36 @@ class Interpreter {
             case TokenType.T_OPERATOR_ASSIGN:
                 code += this.interpretExpression(expression.left) + " = " + this.interpretExpression(expression.right);
                 break;
-            // case TokenType.T_OPERATOR_ASSIGN_ADD:
-            //     code += this.interpretExpression(expression.left) + " += " + this.interpretExpression(expression.right);
-            //     break;
-            // case TokenType.T_OPERATOR_ASSIGN_SUBTRACT:
-            //     code += this.interpretExpression(expression.left) + " -= " + this.interpretExpression(expression.right);
-            //     break;
-            // case TokenType.T_OPERATOR_ASSIGN_MULTIPLY:
-            //     code += this.interpretExpression(expression.left) + " *= " + this.interpretExpression(expression.right);
-            //     break;
-            // case TokenType.T_OPERATOR_ASSIGN_DIVIDE:
-            //     code += this.interpretExpression(expression.left) + " /= " + this.interpretExpression(expression.right);
-            //     break;
-            // case TokenType.T_OPERATOR_ASSIGN_MODULO:
-            //     code += this.interpretExpression(expression.left) + " %= " + this.interpretExpression(expression.right);
-            //     break;
-            // case TokenType.T_OPERATOR_ASSIGN_BIT_AND:
-            //     code += this.interpretExpression(expression.left) + " &= " + this.interpretExpression(expression.right);
-            //     break;
-            // case TokenType.T_OPERATOR_ASSIGN_BIT_OR:
-            //     code += this.interpretExpression(expression.left) + " |= " + this.interpretExpression(expression.right);
-            //     break;
-            // case TokenType.T_OPERATOR_ASSIGN_BIT_XOR:
-            //     code += this.interpretExpression(expression.left) + " ^= " + this.interpretExpression(expression.right);
-            //     break;
-            // case TokenType.T_OPERATOR_ASSIGN_BIT_LEFT_SHIFT:
-            //     code += this.interpretExpression(expression.left) + " <<= " + this.interpretExpression(expression.right);
-            //     break;
-            // case TokenType.T_OPERATOR_ASSIGN_BIT_RIGHT_SHIFT:
-            //     code += this.interpretExpression(expression.left) + " >>= " + this.interpretExpression(expression.right);
-            //     break;
+            case TokenType.T_OPERATOR_ASSIGN_ADD:
+                code += this.interpretExpression(expression.left) + " += " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_SUBTRACT:
+                code += this.interpretExpression(expression.left) + " -= " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_MULTIPLY:
+                code += this.interpretExpression(expression.left) + " *= " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_DIVIDE:
+                code += this.interpretExpression(expression.left) + " /= " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_MODULO:
+                code += this.interpretExpression(expression.left) + " %= " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_BIT_AND:
+                code += this.interpretExpression(expression.left) + " &= " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_BIT_OR:
+                code += this.interpretExpression(expression.left) + " |= " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_BIT_XOR:
+                code += this.interpretExpression(expression.left) + " ^= " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_BIT_LEFT_SHIFT:
+                code += this.interpretExpression(expression.left) + " <<= " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_BIT_RIGHT_SHIFT:
+                code += this.interpretExpression(expression.left) + " >>= " + this.interpretExpression(expression.right);
+                break;
         }
         
 
@@ -902,10 +1036,10 @@ class Parser {
     
     parseIdentifier(): Ast {
         let ident: Token = this.expect(TokenType.T_IDENTIFIER);
-        this.skip(TokenType.T_WHITESPACE);
+        this.skipWhitespace();
 
         if (this.skip(TokenType.T_OPERATOR_ASSIGN)) {
-            this.skip(TokenType.T_WHITESPACE);
+            this.skipWhitespace();
 
             let expr: any = this.parseExpression();
 
@@ -915,7 +1049,7 @@ class Parser {
                 expr
             );
         } else if (this.skip(TokenType.T_OPERATOR_DOT)) {
-            this.skip(TokenType.T_WHITESPACE);
+            this.skipWhitespace();
             let expr: any = this.parseExpression();
             return new AstMemberExpression(
                 new AstIdentifier(ident.value),
@@ -930,17 +1064,17 @@ class Parser {
         let has_parent = false;
 
         this.expect(TokenType.T_ECHO);
-        this.skip(TokenType.T_WHITESPACE);
+        this.skipWhitespace();
 
         if (this.skip(TokenType.T_PARENTHESIS_OPEN)) {
             has_parent = true;
-            this.skip(TokenType.T_WHITESPACE);
+            this.skipWhitespace();
         }
 
         let exprs: Array<any> = this.parseExpressions();
 
         if (has_parent) {
-            this.skip(TokenType.T_WHITESPACE);
+            this.skipWhitespace();
             this.expect(TokenType.T_PARENTHESIS_CLOSE);
         }
 
@@ -974,13 +1108,21 @@ class Parser {
         }
     }
 
+    skipWhitespace() {
+        while (this.frontType() === TokenType.T_WHITESPACE ||
+              this.frontType() === TokenType.T_INLINE_COMMENT ||
+              this.frontType() === TokenType.T_BLOCK_COMMENT) {
+            this.goNextToken();
+        }
+    }
+
     parseBlock(): Ast {
         if (this.skip(TokenType.T_SEMICOLON)) {
             return new AstEmptyStatement();
         }
 
         this.expect(TokenType.T_OPEN_BRACE);
-        this.skip(TokenType.T_WHITESPACE);
+        this.skipWhitespace();
         let statements: AstStatement[] = [];
         while (!this.isEOF() && !this.skip(TokenType.T_CLOSE_BRACE)) {
             const ast: Ast | null = this.parseStatement();
@@ -991,17 +1133,17 @@ class Parser {
 
     parseIf(): Ast {
         this.expect(TokenType.T_IF);
-        this.skip(TokenType.T_WHITESPACE);
+        this.skipWhitespace();
 
         let test: Ast = this.parseExpression();
-        this.skip(TokenType.T_WHITESPACE);
+        this.skipWhitespace();
 
         let consequent: Ast = this.parseBlock();
-        this.skip(TokenType.T_WHITESPACE);
+        this.skipWhitespace();
 
         let alternate: Ast | null = null;
         if (this.skip(TokenType.T_ELSE)) {
-            this.skip(TokenType.T_WHITESPACE);
+            this.skipWhitespace();
 
             if (this.has(TokenType.T_OPEN_BRACE) || this.has(TokenType.T_SEMICOLON)) {
                 alternate = this.parseBlock();
@@ -1016,9 +1158,9 @@ class Parser {
 
     parseSubExpression(): Ast {
         this.skip(TokenType.T_PARENTHESIS_OPEN);
-        this.skip(TokenType.T_WHITESPACE);
+        this.skipWhitespace();
         let expr: Ast = this.parseExpression();
-        this.skip(TokenType.T_WHITESPACE);
+        this.skipWhitespace();
         this.skip(TokenType.T_PARENTHESIS_CLOSE);
 
         return expr;
@@ -1107,19 +1249,19 @@ class Parser {
     }
     
     parseTernaryExpression(clause: Ast): Ast {
-        this.skip(TokenType.T_WHITESPACE);
+        this.skipWhitespace();
 
         this.expect(TokenType.T_OPERATOR_QUESTION);
-        this.skip(TokenType.T_WHITESPACE);
+        this.skipWhitespace();
 
         let consequent: Ast = this.parseExpression(0);
-        this.skip(TokenType.T_WHITESPACE);
+        this.skipWhitespace();
 
         this.expect(TokenType.T_OPERATOR_COLON);
-        this.skip(TokenType.T_WHITESPACE);
+        this.skipWhitespace();
 
         let alternate: Ast = this.parseExpression(0);
-        this.skip(TokenType.T_WHITESPACE);
+        this.skipWhitespace();
 
         return new AstTernaryExpression(clause, consequent, alternate);
     }
@@ -1191,10 +1333,10 @@ class Parser {
 
         while (!this.isEOF()) {
             expressions.push(this.parseExpression());
-            this.skip(TokenType.T_WHITESPACE);
+            this.skipWhitespace();
 
             if (this.skip(TokenType.T_COMMA)) {
-                this.skip(TokenType.T_WHITESPACE);
+                this.skipWhitespace();
             } else {
                 break;
             }
@@ -1219,7 +1361,7 @@ class Parser {
 
         assert(result != null); // We should always have either a LHS or Prefix Operator at this point.
 
-        this.skip(TokenType.T_WHITESPACE);
+        this.skipWhitespace();
 
         while(binding_power_to_my_right < this.bp_lookup(this.frontType()).left_power) {
             // Is it a postfix expression?
@@ -1258,7 +1400,7 @@ class Parser {
 
     parseStatement(): Ast | null {
         const ft = this.frontType();
-        if (ft === TokenType.T_EOF || ft === TokenType.T_WHITESPACE || ft === TokenType.T_SEMICOLON) {
+        if (ft === TokenType.T_EOF || ft === TokenType.T_WHITESPACE || ft === TokenType.T_SEMICOLON || ft === TokenType.T_INLINE_COMMENT || ft === TokenType.T_BLOCK_COMMENT) {
             this.goNextToken();
             return null;
         } else if (ft === TokenType.T_IF) {
@@ -1294,7 +1436,7 @@ class Parser {
         }
         return false;
     }
-
+    
     expect(looking_for: TokenType): Token {
         let ft: TokenType = this.frontType();
         if (ft !== looking_for) {
@@ -1337,7 +1479,7 @@ function main(): void
     // const source_code = "'hey';";
     // const source_code = "   true   ;   ";
     // const source_code = "   true and true or (false);   ";
-    const source_code = "echo(10, 20, 30); if true {}else if false{} else if true and true {} else {echo 1}";
+    const source_code = "// hi there\necho(10, 20, 30); if true {}else if false{} else if true and true {} else {echo 1}";
     input.setData(source_code);
     console.log(input);
 
