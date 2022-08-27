@@ -1482,7 +1482,7 @@ function main(): void
     // const source_code = "'hey';";
     // const source_code = "   true   ;   ";
     // const source_code = "   true and true or (false);   ";
-    const source_code = "// hi there\necho(10, 20, 30); if true {}else if false{} else if true and true {} else {echo 1}";
+    const source_code = "# hi there\necho(10, 20, 30); if true {}else if false{} else if true and true {} else {echo 1}";
     input.setData(source_code);
     console.log(input);
 
