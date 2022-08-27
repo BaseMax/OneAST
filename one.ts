@@ -531,9 +531,14 @@ class Lexer {
         let identifier = "";
 
         let c = this.getChar();
-        while (c !== null && this.isAlpha(c)) {
+        if (c !== null && this.isAlpha(c)) {
             identifier += c;
             c = this.nextChar();
+
+            while (c !== null && (this.isAlpha(c) || this.isDigit(c))) {
+                identifier += c;
+                c = this.nextChar();
+            }
         }
 
         if (this.reservedWords[identifier])
@@ -927,8 +932,6 @@ class Interpreter {
     }
 
     interpretExpression(expression: Ast): string {
-        // console.log(expression);
-
         switch (expression.kind) {
             case "Identifier":
                 return (expression as AstIdentifier).name;
@@ -1312,7 +1315,7 @@ class Parser {
 
         console.log(`bp_lookup: ${whichOperator}, ${TokenType[whichOperator]}`);
         switch (whichOperator) {
-            case TokenType.T_PARENTHESIS_OPEN: return this.RightAssociative(99999);
+            case TokenType.T_PARENTHESIS_OPEN: return this.RightAssociative(997);
             case TokenType.T_OPERATOR_DOT: return this.RightAssociative(999);
 
             case TokenType.T_OPERATOR_AND: return this.LeftAssociative(300);
