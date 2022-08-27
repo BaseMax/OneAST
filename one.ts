@@ -279,14 +279,14 @@ class Lexer {
         if (c === null) {
             return this.createToken(TokenType.T_EOF);
         }
-        if (this.isWhitespace(c)) {
+        else if (this.isWhitespace(c)) {
             return this.readWhitespace();
         }
-        if (c === ";") {
+        else if (c === ";") {
             this.nextIndex(1);
             return this.createToken(TokenType.T_SEMICOLON);
         }
-        if (c === "+") {
+        else if (c === "+") {
             this.nextIndex(1);
             if (this.getChar() === "=") {
                 this.nextIndex(1);
@@ -297,7 +297,7 @@ class Lexer {
             }
             return this.createToken(TokenType.T_OPERATOR_PLUS);
         }
-        if (c === "-") {
+        else if (c === "-") {
             this.nextIndex(1);
             if (this.getChar() === "=") {
                 this.nextIndex(1);
@@ -308,7 +308,7 @@ class Lexer {
             }
             return this.createToken(TokenType.T_OPERATOR_MINUS);
         }
-        if (c === "*") {
+        else if (c === "*") {
             this.nextIndex(1);
             if (this.getChar() === "*") {
                 this.nextIndex(1);
@@ -319,7 +319,7 @@ class Lexer {
             }
             return this.createToken(TokenType.T_OPERATOR_MULTIPLY);
         }
-        if (c === "/") {
+        else if (c === "/") {
             this.nextIndex(1);
             if (this.getChar() === "/") {
                 this.nextIndex(1);
@@ -333,7 +333,7 @@ class Lexer {
             }
             return this.createToken(TokenType.T_OPERATOR_DIVIDE);
         }
-        if (c === "%") {
+        else if (c === "%") {
             this.nextIndex(1);
             if (this.getChar() === "=") {
                 this.nextIndex(1);
@@ -341,54 +341,43 @@ class Lexer {
             }
             return this.createToken(TokenType.T_OPERATOR_MODULO);
         }
-        if (c === ".") {
+        else if (c === ".") {
             this.nextIndex(1);
             return this.createToken(TokenType.T_OPERATOR_DOT);
         }
-        if (c === ":") {
+        else if (c === ":") {
             this.nextIndex(1);
             return this.createToken(TokenType.T_OPERATOR_COLON);
         }
-        if (c === "?") {
+        else if (c === "?") {
             this.nextIndex(1);
             return this.createToken(TokenType.T_OPERATOR_QUESTION);
         }
-        if (c === "(") {
+        else if (c === "(") {
             this.nextIndex(1);
             return this.createToken(TokenType.T_PARENTHESIS_OPEN);
         }
-        if (c === ")") {
+        else if (c === ")") {
             this.nextIndex(1);
             return this.createToken(TokenType.T_PARENTHESIS_CLOSE);
         }
-        if (c === "{") {
+        else if (c === "{") {
             this.nextIndex(1);
             return this.createToken(TokenType.T_OPEN_BRACE);
         }
-        if (c === "}") {
+        else if (c === "}") {
             this.nextIndex(1);
             return this.createToken(TokenType.T_CLOSE_BRACE);
         }
-        // T_STRING_SINGLE_QUOTE
-        if (c === "'") {
+        else if (c === "'") {
             this.nextIndex(1);
             return this.createToken(TokenType.T_STRING_SINGLE_QUOTE, this.readStringSingle());
         }
-        // T_STRING_DOUBLE_QUOTE
-        if (c === "\"") {
+        else if (c === "\"") {
             this.nextIndex(1);
             return this.createToken(TokenType.T_STRING_DOUBLE_QUOTE, this.readStringDouble());
         }
-        // T_OPERATOR_GREATER_THAN = 16,
-        // T_OPERATOR_LESS_THAN = 17,
-        // T_OPERATOR_GREATER_THAN_EQUAL = 18,
-        // T_OPERATOR_LESS_THAN_EQUAL = 19,
-        // T_OPERATOR_ASSIGN_EQUAL = 20,
-        // T_OPERATOR_NOT_EQUAL = 21,
-        // T_OPERATOR_AND = 22,
-        // T_OPERATOR_OR = 23,
-        // T_OPERATOR_NOT = 24,
-        if (c === ">") {
+        else if (c === ">") {
             this.nextIndex(1);
             if (this.getChar() === "=") {
                 this.nextIndex(1);
@@ -404,7 +393,7 @@ class Lexer {
             }
             return this.createToken(TokenType.T_OPERATOR_GREATER_THAN);
         }
-        if (c === "<") {
+        else if (c === "<") {
             this.nextIndex(1);
             if (this.getChar() === "=") {
                 this.nextIndex(1);
@@ -423,7 +412,7 @@ class Lexer {
             }
             return this.createToken(TokenType.T_OPERATOR_LESS_THAN);
         }
-        if (c === "^") {
+        else if (c === "^") {
             this.nextIndex(1);
             if (this.getChar() === "=") {
                 this.nextIndex(1);
@@ -431,7 +420,7 @@ class Lexer {
             }
             return this.createToken(TokenType.T_OPERATOR_BIT_XOR);
         }
-        if (c === "=") {
+        else if (c === "=") {
             this.nextIndex(1);
             if (this.getChar() === "=") {
                 this.nextIndex(1);
@@ -439,7 +428,7 @@ class Lexer {
             }
             return this.createToken(TokenType.T_OPERATOR_ASSIGN);
         }
-        if (c === "|") {
+        else if (c === "|") {
             this.nextIndex(1);
             if (this.getChar() === "|") {
                 this.nextIndex(1);
@@ -450,7 +439,7 @@ class Lexer {
             }
             return this.createToken(TokenType.T_OPERATOR_BIT_OR);
         }
-        if (c === "&") {
+        else if (c === "&") {
             this.nextIndex(1);
             if (this.getChar() === "&") {
                 this.nextIndex(1);
@@ -461,7 +450,7 @@ class Lexer {
             }
             return this.createToken(TokenType.T_OPERATOR_BIT_AND);
         }
-        if (c === "!") {
+        else if (c === "!") {
             this.nextIndex(1);
             if (this.getChar() === "=") {
                 this.nextIndex(1);
@@ -469,14 +458,14 @@ class Lexer {
             }
             return this.createToken(TokenType.T_OPERATOR_NOT);
         }
-        if (c === ",") {
+        else if (c === ",") {
             this.nextIndex(1);
             return this.createToken(TokenType.T_COMMA);
         }
-        if (this.isDigit(c)) {
+        else if (this.isDigit(c)) {
             return this.readNumber();
         }
-        if (this.isAlpha(c)) {
+        else if (this.isAlpha(c)) {
             return this.readIdentifier();
         }
         return this.createToken(TokenType.T_ERROR, `Unexpected character ${c}`);
