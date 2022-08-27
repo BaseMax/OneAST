@@ -925,6 +925,9 @@ class Interpreter {
             case TokenType.T_OPERATOR_MODULO:
                 code += this.interpretExpression(expression.left) + " % " + this.interpretExpression(expression.right);
                 break;
+            case TokenType.T_OPERATOR_DOT:
+                code += this.interpretExpression(expression.left) + "." + this.interpretExpression(expression.right);
+                break;
         }
         
 
@@ -935,12 +938,19 @@ class Interpreter {
         switch (expression.kind) {
             case "Identifier":
                 return (expression as AstIdentifier).name;
+                break;
             case "LiteralExpression":
                 return (expression as AstLiteralExpression).value;
+                break;
             case "BinaryExpression":
                 return this.interpretBinaryExpression(expression as AstBinaryExpression);
+                break;
+            case "CallExpression":
+                return this.interpretCallExpression(expression as AstCallExpression);
+                break;
             default:
                 throw new Error("Unsupported expression: " + expression.kind);
+                break;
         }
         return "";
     }
@@ -948,20 +958,29 @@ class Interpreter {
     interpretCallExpression(statement: AstCallExpression): string {
         let code = "";
 
-        code += "call " + this.interpretExpression(statement.callee);
+        code += this.interpretExpression(statement.callee);
         code += "(";
         code += statement.arguments.map(arg => this.interpretExpression(arg)).join(", ");
-        code += ");\n";
+        code += ")";
+
+        return code;
+    }
+
+    interpretExpressionStatement(statement: AstExpressionStatement): string {
+        let code = "";
+
+        code += this.interpretExpression(statement.expression);
+        code += ";\n";
 
         return code;
     }
 
     interpretStatement(statement: AstStatement): string {
-        // console.log("Stmt:", statement.kind, statement);
+        console.log("Stmt:", statement.kind, statement);
 
         switch (statement.kind) {
             case "ExpressionStatement":
-                // return this.interpretExpressionStatement(statement);
+                return this.interpretExpressionStatement(statement as AstExpressionStatement);
                 break;
             case "CallExpression":
                 return this.interpretCallExpression(statement as AstCallExpression);
@@ -1528,7 +1547,7 @@ function main(): void
     // const source_code = "say_hi('hi');";
     // const source_code = "say_hi('hi');array.create(50);";
     // const source_code = "array.create(50);";
-    const source_code = "math.sin(45) + math.sin(180);";
+    const source_code = "echo math.sin(45) + math.sin(180);";
     input.setData(source_code);
     console.log(input);
 
