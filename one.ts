@@ -214,12 +214,13 @@ class Lexer {
         while (!this.isEOF()) {
             this.location.start_location = this.location.end_location.deep();
 
-            const token = this.nextToken();
-            this.tokens.push(token);
+            const token: Token | null = this.nextToken();
+            if (token) this.tokens.push(token);
         }
 
-        this.tokens.push(new Token(TokenType.T_EOF, this.location));
-
+        if (this.tokens.length > 0 && this.tokens[this.tokens.length - 1].kind !== "T_EOF") {
+            this.tokens.push(this.createToken(TokenType.T_EOF));
+        }
         this.location.start_location = new Location(0, 0, 1);
     }
 
@@ -278,7 +279,7 @@ class Lexer {
     nextToken(): Token {
         let c = this.getChar();
 
-        if (c === null) {
+        if (c === null || c === '\0') {
             return this.createToken(TokenType.T_EOF);
         }
         else if (this.isWhitespace(c)) {
@@ -953,7 +954,7 @@ class Interpreter {
     }
 
     interpretStatement(statement: AstStatement): string {
-        console.log("Stmt:", statement.kind, statement);
+        // console.log("Stmt:", statement.kind, statement);
 
         switch (statement.kind) {
             case "ExpressionStatement":
@@ -991,7 +992,7 @@ class Interpreter {
                 throw new Error("Unsupported statement: " + statement.alternate.kind);
             }
             
-            if (statement.alternate.kind === "BlockStatement") code += "{ ";
+            if (statement.alternate.kind === "BlockStatement") code += "{";
             code += this.interpretStatement(statement.alternate as AstBlock);
             if (statement.alternate.kind === "BlockStatement") code += "}";
         }
@@ -1482,7 +1483,7 @@ function main(): void
     // const source_code = "'hey';";
     // const source_code = "   true   ;   ";
     // const source_code = "   true and true or (false);   ";
-    const source_code = "# hi there\necho(10, 20, 30); if true {}else if false{} else if true and true {} else {echo 1}";
+    const source_code = "# hi there\necho(10, 20, 30); if true {}else if false{} else if true and true {} else {echo 1}\narray(50);";
     input.setData(source_code);
     console.log(input);
 
