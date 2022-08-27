@@ -409,6 +409,8 @@ class Lexer {
             c = this.nextChar();
         }
 
+        console.log(identifier, this.reservedWords);
+
         if (this.reservedWords[identifier]) {
             return this.createToken(this.reservedWords[identifier]);
         }
@@ -702,45 +704,45 @@ class Interpreter {
     }
 
     interpretExpression(expression: Ast): string {
-        let code = "";
         // console.log(expression);
+
         switch (expression.kind) {
+            case "Identifier":
+                return (expression as AstIdentifier).name;
             case "LiteralExpression":
                 return (expression as AstLiteralExpression).value;
             default:
                 throw new Error("Unsupported expression: " + expression.kind);
         }
+        return "";
     }
 
-    interpretCallExpression(statement: Ast): string {
+    interpretCallExpression(statement: AstCallExpression): string {
         let code = "";
-        
-        console.log(statement);
-        // let callee = this.interpretExpression(callExpression.callee);
-        // let args = callExpression.arguments.map(arg => this.interpretExpression(arg));
-        // callee.call(this, args);
 
-        // code += "call " + statement.callee.name;
+        code += "call " + this.interpretExpression(statement.callee);
         code += "(";
-        // code += statement.arguments.map(arg => this.interpretExpression(arg)).join(", ");
+        code += statement.arguments.map(arg => this.interpretExpression(arg)).join(", ");
         code += ");\n";
+
         return code;
     }
 
     interpretStatement(statement: AstStatement): string {
-        console.log(statement.kind);
+        console.log("Stmt:", statement.kind, statement);
+
         switch (statement.kind) {
             case "ExpressionStatement":
                 // return this.interpretExpressionStatement(statement);
                 break;
             case "CallExpression":
-                return this.interpretCallExpression(statement);
+                return this.interpretCallExpression(statement as AstCallExpression);
                 break;
             case "BlockStatement":
                 // return this.interpretBlockStatement(statement);
                 break;
             case "IfStatement":
-                // return this.interpretIfStatement(statement);
+                return this.interpretIfStatement(statement as AstIfStatement);
                 break;
             case "EmptyStatement":
                 // return this.interpretEmptyStatement(statement);
@@ -751,13 +753,36 @@ class Interpreter {
         return "";
     }
 
-    interpretIfStatement(statement: AstIfStatement): void {
-        // this.interpretExpression(statement.test);
-        // if (this.popBoolean()) {
-        //     this.interpretStatements(statement.consequent);
-        // } else if (statement.alternate) {
-        //     this.interpretStatements(statement.alternate);
-        // }
+    interpretIfStatement(statement: AstIfStatement): string {
+        let code = "";
+
+        const test: string = this.interpretExpression(statement.test);
+
+        code += "if (" + test + ") ";
+        code += this.interpretBlock(statement.consequent as AstBlock);
+
+        if (statement.alternate) {
+            code += " else ";
+            if (statement.alternate.kind !== "IfStatement" && statement.alternate.kind !== "BlockStatement" && statement.alternate.kind !== "EmptyStatement") {
+                throw new Error("Unsupported statement: " + statement.alternate.kind);
+            }
+            code += this.interpretStatement(statement.alternate as AstBlock);
+        }
+
+        return code;
+    }
+
+    interpretBlock(block: AstBlock): string {
+        console.log("===>", block);
+        let code = "";
+
+        code += "{";
+        for (let statement of block.statements) {
+            code += this.interpretStatement(statement);
+        }
+        code += "}";
+
+        return code;
     }
 
 }
@@ -1078,11 +1103,10 @@ class Parser {
             expressions.push(this.parseExpression());
             this.skip(TokenType.T_WHITESPACE);
 
-            if (this.has(TokenType.T_PARENTHESIS_CLOSE)) {
-                break;
-            } else {
-                this.expect(TokenType.T_COMMA);
+            if (this.skip(TokenType.T_COMMA)) {
                 this.skip(TokenType.T_WHITESPACE);
+            } else {
+                break;
             }
         }
 
@@ -1223,7 +1247,7 @@ function main(): void
     // const source_code = "'hey';";
     // const source_code = "   true   ;   ";
     // const source_code = "   true and true or (false);   ";
-    const source_code = "echo(10, 20, 30);";
+    const source_code = "echo(10, 20, 30); if true {}else if false{} else if true and true {} else {echo 1}";
     input.setData(source_code);
     console.log(input);
 
