@@ -51,7 +51,7 @@ enum TokenType {
     T_WHITESPACE = 1,
     T_IDENTIFIER = 2,
 
-    T_NUMBER = 3,
+    T_NUMBER_INT = 3,
     T_SEMICOLON = 4,
     T_COMMA = 5,
 
@@ -133,6 +133,7 @@ enum TokenType {
     T_RETURN,
 
     T_OPERATOR_DIVIDE_INTEGER,
+    T_NUMBER_FLOAT,
 }
 
 class Token {
@@ -351,6 +352,11 @@ class Lexer {
         }
         else if (c === ".") {
             this.nextIndex(1);
+            const ch = this.getChar();
+            if (ch !== null && this.isDigit(ch)) {
+                this.nextIndex(-1);
+                return this.readNumber();
+            }
             return this.createToken(TokenType.T_OPERATOR_DOT);
         }
         else if (c === ":") {
@@ -517,14 +523,27 @@ class Lexer {
 
     readNumber() : Token {
         let number = "";
+        let isFloat = false;
 
         let c = this.getChar();
+        // optional loop: `.14` allowed and will cast to `0.14`
         while (c !== null && this.isDigit(c)) {
             number += c;
             c = this.nextChar();
         }
 
-        return this.createToken(TokenType.T_NUMBER, number);
+        if (c === ".") {
+            isFloat = true;
+            if (number === "") number = "0";
+            number += c;
+            c = this.nextChar();
+            while (c !== null && this.isDigit(c)) {
+                number += c;
+                c = this.nextChar();
+            }
+        }
+
+        return this.createToken(isFloat ? TokenType.T_NUMBER_FLOAT : TokenType.T_NUMBER_INT, number);
     }
 
     readIdentifier() : Token {
@@ -1113,9 +1132,9 @@ class Parser {
 
     parseExpressionLiteral(): Ast {
         const ft = this.frontType();
-        if (ft === TokenType.T_NUMBER) {
-            const t: Token = this.expect(TokenType.T_NUMBER);
-            return new AstLiteralExpression("number", t.value);
+        if (ft === TokenType.T_NUMBER_INT || ft === TokenType.T_NUMBER_FLOAT) {
+            const t: Token = this.expect(ft);
+            return new AstLiteralExpression(ft === TokenType.T_NUMBER_FLOAT ? "float" : "int", t.value);
         } else if (ft === TokenType.T_TRUE || ft === TokenType.T_FALSE) {
             const t: Token = this.expectOneOf([
                 TokenType.T_TRUE,
@@ -1310,6 +1329,13 @@ class Parser {
 
             TokenType.T_OPERATOR_AND,
             TokenType.T_OPERATOR_OR,
+
+            TokenType.T_OPERATOR_ASSIGN_EQUAL,
+            TokenType.T_OPERATOR_NOT_EQUAL,
+            TokenType.T_OPERATOR_LESS_THAN,
+            TokenType.T_OPERATOR_LESS_THAN_EQUAL,
+            TokenType.T_OPERATOR_GREATER_THAN,
+            TokenType.T_OPERATOR_GREATER_THAN_EQUAL,
         ]);
         if (operator === null) {
             throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
@@ -1388,7 +1414,7 @@ class Parser {
         let result: Ast | null = null;
 
         const ft = this.frontType();
-        if (ft === TokenType.T_IDENTIFIER || ft === TokenType.T_NUMBER || ft === TokenType.T_STRING_DOUBLE_QUOTE || ft === TokenType.T_STRING_SINGLE_QUOTE || ft === TokenType.T_TRUE || ft === TokenType.T_FALSE || ft === TokenType.T_NULL || ft === TokenType.T_UNDEFINED) {
+        if (ft === TokenType.T_IDENTIFIER || ft === TokenType.T_NUMBER_INT || ft === TokenType.T_NUMBER_FLOAT || ft === TokenType.T_STRING_DOUBLE_QUOTE || ft === TokenType.T_STRING_SINGLE_QUOTE || ft === TokenType.T_TRUE || ft === TokenType.T_FALSE || ft === TokenType.T_NULL || ft === TokenType.T_UNDEFINED) {
             result = this.parseExpressionLiteral();
         } else if (ft === TokenType.T_PARENTHESIS_OPEN) {
             result = this.parseSubExpression();
@@ -1439,7 +1465,8 @@ class Parser {
                ft === TokenType.T_NULL ||
                ft === TokenType.T_UNDEFINED ||
 
-               ft === TokenType.T_NUMBER ||
+               ft === TokenType.T_NUMBER_INT ||
+               ft === TokenType.T_NUMBER_FLOAT ||
                ft === TokenType.T_STRING_DOUBLE_QUOTE ||
                ft === TokenType.T_STRING_SINGLE_QUOTE ||
 
@@ -1547,7 +1574,14 @@ function main(): void
     // const source_code = "say_hi('hi');";
     // const source_code = "say_hi('hi');array.create(50);";
     // const source_code = "array.create(50);";
-    const source_code = "echo math.sin(45) + math.sin(180);";
+    const source_code = `
+    echo math.sin(45) + math.sin(180);
+    if (math.sin(45) > 0.5) {
+        echo true;
+    } else {
+        echo false;
+    }
+    `;
     input.setData(source_code);
     console.log(input);
 
