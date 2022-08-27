@@ -218,9 +218,7 @@ class Lexer {
             if (token) this.tokens.push(token);
         }
 
-        if (this.tokens.length > 0 && this.tokens[this.tokens.length - 1].kind !== "T_EOF") {
-            this.tokens.push(this.createToken(TokenType.T_EOF));
-        }
+        this.tokens.push(this.createToken(TokenType.T_EOF));
         this.location.start_location = new Location(0, 0, 1);
     }
 
@@ -245,7 +243,6 @@ class Lexer {
                 this.nextIndex(1);
                 this.location.end_location.line++;
                 this.location.end_location.offset = 0;
-                break;
             } else if (c === "*") {
                 this.nextIndex(1);
                 if (this.getChar() === "/") {
@@ -276,11 +273,11 @@ class Lexer {
         return comment;
     }
 
-    nextToken(): Token {
+    nextToken(): Token | null {
         let c = this.getChar();
 
         if (c === null || c === '\0') {
-            return this.createToken(TokenType.T_EOF);
+            return null;
         }
         else if (this.isWhitespace(c)) {
             return this.readWhitespace();
