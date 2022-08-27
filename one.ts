@@ -222,7 +222,8 @@ class Lexer {
         this.location.start_location = new Location(0, 0, 1);
     }
 
-    nextIndex(n: number) { // n maybe negative
+    nextIndex(n: number) {
+        // n maybe negative
         this.location.end_location.offset += n;
         this.location.end_location.index += n;
     }
@@ -237,6 +238,7 @@ class Lexer {
 
     readBlockComment(): string {
         let comment = "";
+
         while (!this.isEOF()) {
             const c = this.getChar();
             if (c === "\n") {
@@ -255,6 +257,7 @@ class Lexer {
             comment += c;
             this.nextIndex(1);
         }
+        
         return comment;
     }
 
