@@ -100,6 +100,9 @@ enum TokenType {
     T_NULL = 29,
     T_UNDEFINED = 30,
 
+    T_OPERATOR_BIT_AND = 31,
+    T_OPERATOR_BIT_OR = 32,
+
     T_ECHO,
     T_IF,
     T_ELSE,
@@ -169,6 +172,9 @@ class Lexer {
         "false": TokenType.T_FALSE,
         "null": TokenType.T_NULL,
         "undefined": TokenType.T_UNDEFINED,
+
+        "and": TokenType.T_OPERATOR_AND,
+        "or": TokenType.T_OPERATOR_OR,
     };
 
     location: LocationInfo = new LocationInfo();
@@ -308,6 +314,22 @@ class Lexer {
             }
             return this.createToken(TokenType.T_OPERATOR_EQUAL);
         }
+        if (c === "|") {
+            this.nextIndex(1);
+            if (this.getChar() === "|") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_OR);
+            }
+            return this.createToken(TokenType.T_OPERATOR_BIT_OR);
+        }
+        if (c === "&") {
+            this.nextIndex(1);
+            if (this.getChar() === "&") {
+                this.nextIndex(1);
+                return this.createToken(TokenType.T_OPERATOR_AND);
+            }
+            return this.createToken(TokenType.T_OPERATOR_BIT_AND);
+        }
         if (c === "!") {
             this.nextIndex(1);
             if (this.getChar() === "=") {
@@ -442,7 +464,7 @@ class Ast {
 }
 
 class AstExpressionStatement extends Ast {
-    kind: string = "expression_statement";
+    kind: string = "ExpressionStatement";
     expression: Ast;
 
     constructor(expression: Ast) {
@@ -644,6 +666,84 @@ class AstProgram implements Ast {
         this.body = body;
         this.location = location;
     }
+}
+
+class Interpreter {
+    ast: any;
+    code: string = "";
+
+    constructor(ast: any) {
+        this.ast = ast;
+    }
+
+    interpret(): void {
+        console.log(this.ast);
+        assert(this.ast.kind === "Program");
+
+        if (this.ast.errors.length > 0) {
+            throw new Error("Parse error: " + this.ast.errors.join(", "));
+            return;
+        }
+
+        this.interpretStatements(this.ast.body);
+    }
+
+    interpretStatements(statements: AstStatement[]): void {
+        for (let statement of statements) {
+            this.interpretStatement(statement);
+        }
+    }
+
+    interpretStatement(statement: AstStatement): void {
+        switch (statement.kind) {
+            case "ExpressionStatement":
+                // this.interpretExpressionStatement(statement);
+                break;
+            case "BlockStatement":
+                // this.interpretBlockStatement(statement);
+                break;
+            case "IfStatement":
+                // this.interpretIfStatement(statement);
+                break;
+            case "EmptyStatement":
+                // this.interpretEmptyStatement(statement);
+                break;
+            default:
+                throw new Error("Unknown statement kind: " + statement.kind);
+        }
+    }
+
+    // interpretExpression(expression: Ast): any {
+    //     switch (expression.kind) {
+    //         case "Identifier":
+    //             return this.interpretIdentifier(expression);
+    //         case "LiteralExpression":
+    //             return this.interpretLiteralExpression(expression);
+    //         case "BinaryExpression":
+    //             return this.interpretBinaryExpression(expression);
+    //         case "UnaryExpression":
+    //             return this.interpretUnaryExpression(expression);
+    //         case "CallExpression":
+    //             return this.interpretCallExpression(expression);
+    //         case "MemberExpression":
+    //             return this.interpretMemberExpression(expression);
+    //         case "ConditionalExpression":
+    //             return this.interpretConditionalExpression(expression);
+    //         default:
+    //             throw new Error("Unknown expression kind: " + expression.kind);
+    //     }
+    // }
+
+
+    interpretIfStatement(statement: AstIfStatement): void {
+        // this.interpretExpression(statement.test);
+        // if (this.popBoolean()) {
+        //     this.interpretStatements(statement.consequent);
+        // } else if (statement.alternate) {
+        //     this.interpretStatements(statement.alternate);
+        // }
+    }
+
 }
 
 class Parser {
@@ -884,14 +984,15 @@ class Parser {
     
     parseBinaryExpression(_lhs: Ast, min_bp: number): Ast {
         let lhs: Ast = _lhs;
-        // let operator: Token | null = this.expectOneOf([
-        //     TokenType.T_OPERATOR_PLUS,
-        //     TokenType.T_OPERATOR_MINUS,
-        // ]);
+        let operator: Token | null = this.expectOneOf([
+            TokenType.T_OPERATOR_PLUS,
+            TokenType.T_OPERATOR_MINUS,
+            TokenType.T_OPERATOR_MULTIPLY,
+            TokenType.T_OPERATOR_DIVIDE,
 
-        // console.log("ft is:", this.front());
-        let operator: Token | null = this.front();
-
+            TokenType.T_OPERATOR_AND,
+            TokenType.T_OPERATOR_OR,
+        ]);
         if (operator === null) {
             throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
         }
@@ -914,6 +1015,12 @@ class Parser {
         const no_binding_power: binding_power = {left_power: 0, right_power: 0};
 
         switch (whichOperator) {
+            case TokenType.T_OPERATOR_AND: return this.LeftAssociative(300);
+            case TokenType.T_OPERATOR_OR: return this.LeftAssociative(400);
+
+            case TokenType.T_OPERATOR_BIT_AND: return this.LeftAssociative(500);
+            case TokenType.T_OPERATOR_BIT_OR: return this.LeftAssociative(600);
+
             case TokenType.T_OPERATOR_PLUS: return this.LeftAssociative(100);
             case TokenType.T_OPERATOR_MINUS: return this.LeftAssociative(100);
             case TokenType.T_OPERATOR_MULTIPLY: return this.LeftAssociative(200);
@@ -958,6 +1065,8 @@ class Parser {
 
         assert(result != null); // We should always have either a LHS or Prefix Operator at this point.
 
+        this.skip(TokenType.T_WHITESPACE);
+
         // console.log(binding_power_to_my_right);
         // console.log(this.bp_lookup(this.frontType()).left_power);
 
@@ -998,16 +1107,22 @@ class Parser {
 
     parseStatement(): Ast | null {
         const ft = this.frontType();
+        console.log("ft:", ft, TokenType[ft]);
         if (ft === TokenType.T_WHITESPACE || ft === TokenType.T_SEMICOLON) {
+            console.log("\t skip");
             this.goNextToken();
             return null;
         } else if (ft === TokenType.T_IF) {
+            console.log("\t if");
             return this.parseIf();
         } else if (ft === TokenType.T_ECHO) {
+            console.log("\t echo");
             return this.parseEcho();
         } else if (this.is_value(ft)) {
+            console.log("\t value");
             return new AstExpressionStatement(this.parseExpression());
         } else {
+            console.log("\t none");
             throw new Error(`Unexpected token ${TokenType[ft]}`);
         }
     }
@@ -1076,7 +1191,8 @@ function main(): void
     // const source_code = "echo 10+110*10;";
     // const source_code = "10+110*10;";
     // const source_code = "'hey';";
-    const source_code = "true and false;";
+    // const source_code = "   true   ;   ";
+    const source_code = "   true and true;   ";
     input.setData(source_code);
     console.log(input);
 
@@ -1089,14 +1205,16 @@ function main(): void
 
     // =============== Parser =================
     const parser: Parser = new Parser(lexer.location, lexer.tokens);
-    const ast: AstProgram = parser.parse();
     // console.log(parser);
+
+    // =============== AST =================
+    const ast: AstProgram = parser.parse();
     // console.log(ast);
     debug(ast);
 
-    // =============== AST =================
-
     // =============== Interpreter =================
+    const interpreter = new Interpreter(ast);
+    interpreter.interpret();
 
     // =============== Compiler =================
 
