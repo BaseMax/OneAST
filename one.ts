@@ -1041,26 +1041,28 @@ class Parser {
         let ident: Token = this.expect(TokenType.T_IDENTIFIER);
         this.skipWhitespace();
 
-        if (this.skip(TokenType.T_OPERATOR_ASSIGN)) {
-            this.skipWhitespace();
+        // if (this.skip(TokenType.T_OPERATOR_ASSIGN)) {
+        //     this.skipWhitespace();
 
-            let expr: any = this.parseExpression();
+        //     let expr: any = this.parseExpression();
 
-            return new AstAssignmentExpression(
-                "=",
-                new AstIdentifier(ident.value),
-                expr
-            );
-        } else if (this.skip(TokenType.T_OPERATOR_DOT)) {
-            this.skipWhitespace();
-            let expr: any = this.parseExpression();
-            return new AstMemberExpression(
-                new AstIdentifier(ident.value),
-                expr
-            );
-        } else {
+        //     return new AstAssignmentExpression(
+        //         "=",
+        //         new AstIdentifier(ident.value),
+        //         expr
+        //     );
+        // }
+        // else if (this.skip(TokenType.T_OPERATOR_DOT)) {
+        //     this.skipWhitespace();
+        //     let expr: any = this.parseExpression();
+        //     return new AstMemberExpression(
+        //         new AstIdentifier(ident.value),
+        //         expr
+        //     );
+        // }
+        // else {
             return new AstIdentifier(ident.value);
-        }
+        // }
     }
 
     parseEcho(): Ast {
@@ -1277,6 +1279,7 @@ class Parser {
             TokenType.T_OPERATOR_MULTIPLY,
             TokenType.T_OPERATOR_DIVIDE,
             TokenType.T_OPERATOR_DIVIDE_INTEGER,
+            TokenType.T_OPERATOR_DOT,
 
             TokenType.T_OPERATOR_AND,
             TokenType.T_OPERATOR_OR,
@@ -1284,11 +1287,22 @@ class Parser {
         if (operator === null) {
             throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
         }
+
+        // console.log("Binary Expression Prev:", this.front());
         this.goNextToken();
+        // console.log("Binary Expression:", operator);
+        // console.log("Binary Expression Current:", this.front());
 
-        let rhs: Ast = this.parseExpression(min_bp);
+        // if (operator.type === TokenType.T_PARENTHESIS_OPEN) {
+        //     let exprs: Array<Ast> = this.parseExpressions();
+        //     this.expect(TokenType.T_PARENTHESIS_CLOSE);
 
-        return new AstBinaryExpression(operator, lhs, rhs);
+        //     return new AstCallExpression(lhs, exprs);
+        // } else {
+            let rhs: Ast = this.parseExpression(min_bp);
+
+            return new AstBinaryExpression(operator, lhs, rhs);
+        // }
     }
 
     LeftAssociative(priority: number): binding_power {
@@ -1302,7 +1316,11 @@ class Parser {
     bp_lookup(whichOperator: TokenType): binding_power {
         const no_binding_power: binding_power = {left_power: 0, right_power: 0};
 
+        console.log(`bp_lookup: ${whichOperator}, ${TokenType[whichOperator]}`);
         switch (whichOperator) {
+            case TokenType.T_OPERATOR_DOT: return this.RightAssociative(99);
+            // case TokenType.T_PARENTHESIS_OPEN: return this.LeftAssociative(9999);
+
             case TokenType.T_OPERATOR_AND: return this.LeftAssociative(300);
             case TokenType.T_OPERATOR_OR: return this.LeftAssociative(400);
 
@@ -1323,6 +1341,8 @@ class Parser {
             case TokenType.T_OPERATOR_LESS_THAN_EQUAL: return this.LeftAssociative(50);
             case TokenType.T_OPERATOR_ASSIGN_EQUAL: return this.LeftAssociative(50);
             case TokenType.T_OPERATOR_NOT_EQUAL: return this.LeftAssociative(50);
+            
+            case TokenType.T_PARENTHESIS_OPEN: return this.LeftAssociative(900);
 
             // --- Postfix --- (Always Right Associative)
             case TokenType.T_OPERATOR_BANG: return this.RightAssociative(400);
@@ -1350,6 +1370,7 @@ class Parser {
     }
 
     parseExpression(binding_power_to_my_right: number = 0): Ast {
+        console.log("parseExpression:", this.front());
         let result: Ast | null = null;
 
         const ft = this.frontType();
@@ -1368,15 +1389,31 @@ class Parser {
         this.skipWhitespace();
 
         while(binding_power_to_my_right < this.bp_lookup(this.frontType()).left_power) {
+            console.log("In while:", this.front());
             // Is it a postfix expression?
             if (this.has(TokenType.T_OPERATOR_BANG)) {
                 result = this.parsePostfixExpression(result);
             } else if (this.has(TokenType.T_OPERATOR_QUESTION)) {
                 result = this.parseTernaryExpression(result);
+            } else if (this.frontType() === TokenType.T_PARENTHESIS_OPEN || this.frontType() === TokenType.T_PARENTHESIS_CLOSE) {
+                break;
             } else {
                 // It must be a binary expression
+                console.log(`Adding ${TokenType[this.frontType()]} to ${result.kind}`);
                 result = this.parseBinaryExpression(result, this.bp_lookup(this.frontType()).right_power);
             }
+        }
+
+        this.skipWhitespace();
+
+        if (this.skip(TokenType.T_PARENTHESIS_OPEN)) {
+            this.skipWhitespace();
+
+            const exprs: Array<Ast> = this.parseExpressions();
+
+            this.expect(TokenType.T_PARENTHESIS_CLOSE);
+
+            result = new AstCallExpression(result, exprs);
         }
 
         assert(result != null); // This factory should always return an expression tree fragment
@@ -1483,7 +1520,10 @@ function main(): void
     // const source_code = "'hey';";
     // const source_code = "   true   ;   ";
     // const source_code = "   true and true or (false);   ";
-    const source_code = "# hi there\necho(10, 20, 30); if true {}else if false{} else if true and true {} else {echo 1}\narray(50);";
+    // const source_code = "# hi there\necho(10, 20, 30); if true {}else if false{} else if true and true {} else {echo 1}\n";
+    // const source_code = "say_hi('hi');";
+    // const source_code = "say_hi('hi');array.create(50);";
+    const source_code = "array.create(50);";
     input.setData(source_code);
     console.log(input);
 
