@@ -1162,11 +1162,13 @@ class Parser {
     }
 
     parseSubExpression(): Ast {
-        this.skip(TokenType.T_PARENTHESIS_OPEN);
+        this.expect(TokenType.T_PARENTHESIS_OPEN);
         this.skipWhitespace();
+
         let expr: Ast = this.parseExpression();
         this.skipWhitespace();
-        this.skip(TokenType.T_PARENTHESIS_CLOSE);
+
+        this.expect(TokenType.T_PARENTHESIS_CLOSE);
 
         return expr;
     }
@@ -1222,10 +1224,11 @@ class Parser {
             TokenType.T_OPERATOR_PLUS,
             TokenType.T_OPERATOR_MINUS,
         ]);
-
         if (operator === null) {
             throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
         }
+
+        this.skipWhitespace();
 
         const expr: Ast = this.parseExpression(min_bp);
         return new AstPrefixExpression(operator, expr);
@@ -1245,10 +1248,11 @@ class Parser {
             TokenType.T_OPERATOR_PLUS,
             TokenType.T_OPERATOR_MINUS,
         ]);
-
         if (operator === null) {
             throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
         }
+
+        this.skipWhitespace();
 
         return new AstPostfixExpression(operator, lhs);
     }
@@ -1272,6 +1276,7 @@ class Parser {
     }
     
     parseBinaryExpression(_lhs: Ast, min_bp: number): Ast {
+        console.log("parseBinaryExpression: looking for right side of binary expression", min_bp);
         let lhs: Ast = _lhs;
         let operator: Token | null = this.expectOneOf([
             TokenType.T_OPERATOR_PLUS,
@@ -1289,7 +1294,7 @@ class Parser {
         }
 
         // console.log("Binary Expression Prev:", this.front());
-        this.goNextToken();
+        // this.goNextToken();
         // console.log("Binary Expression:", operator);
         // console.log("Binary Expression Current:", this.front());
 
@@ -1342,7 +1347,7 @@ class Parser {
             case TokenType.T_OPERATOR_ASSIGN_EQUAL: return this.LeftAssociative(50);
             case TokenType.T_OPERATOR_NOT_EQUAL: return this.LeftAssociative(50);
             
-            case TokenType.T_PARENTHESIS_OPEN: return this.LeftAssociative(900);
+            // case TokenType.T_PARENTHESIS_OPEN: return this.LeftAssociative(900);
 
             // --- Postfix --- (Always Right Associative)
             case TokenType.T_OPERATOR_BANG: return this.RightAssociative(400);
@@ -1395,26 +1400,27 @@ class Parser {
                 result = this.parsePostfixExpression(result);
             } else if (this.has(TokenType.T_OPERATOR_QUESTION)) {
                 result = this.parseTernaryExpression(result);
-            } else if (this.frontType() === TokenType.T_PARENTHESIS_OPEN || this.frontType() === TokenType.T_PARENTHESIS_CLOSE) {
-                break;
+            // } else if (this.frontType() === TokenType.T_PARENTHESIS_OPEN || this.frontType() === TokenType.T_PARENTHESIS_CLOSE) {
+            //     break;
             } else {
                 // It must be a binary expression
                 console.log(`Adding ${TokenType[this.frontType()]} to ${result.kind}`);
                 result = this.parseBinaryExpression(result, this.bp_lookup(this.frontType()).right_power);
             }
-        }
-
-        this.skipWhitespace();
-
-        if (this.skip(TokenType.T_PARENTHESIS_OPEN)) {
             this.skipWhitespace();
-
-            const exprs: Array<Ast> = this.parseExpressions();
-
-            this.expect(TokenType.T_PARENTHESIS_CLOSE);
-
-            result = new AstCallExpression(result, exprs);
         }
+
+        // this.skipWhitespace();
+
+        // if (this.skip(TokenType.T_PARENTHESIS_OPEN)) {
+        //     this.skipWhitespace();
+
+        //     const exprs: Array<Ast> = this.parseExpressions();
+
+        //     this.expect(TokenType.T_PARENTHESIS_CLOSE);
+
+        //     result = new AstCallExpression(result, exprs);
+        // }
 
         assert(result != null); // This factory should always return an expression tree fragment
         return result;
@@ -1449,7 +1455,19 @@ class Parser {
         } else if (ft === TokenType.T_ECHO) {
             return this.parseEcho();
         } else if (this.is_value(ft)) {
-            return new AstExpressionStatement(this.parseExpression());
+            console.log("Going to run parseExpression");
+            let expr: Ast = this.parseExpression();
+
+            if (this.skip(TokenType.T_PARENTHESIS_OPEN)) {
+                this.skipWhitespace();
+
+                const args: Array<Ast> = this.parseExpressions();
+
+                this.expect(TokenType.T_PARENTHESIS_CLOSE);
+
+                expr = new AstCallExpression(expr, args);
+            }
+            return new AstExpressionStatement(expr);
         } else {
             throw new Error(`Unexpected token ${TokenType[ft]}`);
         }
@@ -1523,7 +1541,8 @@ function main(): void
     // const source_code = "# hi there\necho(10, 20, 30); if true {}else if false{} else if true and true {} else {echo 1}\n";
     // const source_code = "say_hi('hi');";
     // const source_code = "say_hi('hi');array.create(50);";
-    const source_code = "array.create(50);";
+    // const source_code = "array.create(50);";
+    const source_code = "math.sin(45) + math.sin(180);";
     input.setData(source_code);
     console.log(input);
 
