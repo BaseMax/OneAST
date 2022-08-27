@@ -1312,7 +1312,9 @@ class Parser {
 
         console.log(`bp_lookup: ${whichOperator}, ${TokenType[whichOperator]}`);
         switch (whichOperator) {
-            case TokenType.T_OPERATOR_DOT: return this.RightAssociative(99);
+            case TokenType.T_PARENTHESIS_OPEN: return this.RightAssociative(99999);
+            case TokenType.T_OPERATOR_DOT: return this.RightAssociative(999);
+
             case TokenType.T_OPERATOR_AND: return this.LeftAssociative(300);
             case TokenType.T_OPERATOR_OR: return this.LeftAssociative(400);
 
@@ -1385,6 +1387,16 @@ class Parser {
                 result = this.parsePostfixExpression(result);
             } else if (this.has(TokenType.T_OPERATOR_QUESTION)) {
                 result = this.parseTernaryExpression(result);
+            } else if (this.skip(TokenType.T_PARENTHESIS_OPEN)) {
+                this.skipWhitespace();
+
+                const args: Array<Ast> = this.parseExpressions();
+
+                this.skipWhitespace();
+
+                this.expect(TokenType.T_PARENTHESIS_CLOSE);
+
+                result = new AstCallExpression(result, args);
             } else {
                 // It must be a binary expression
                 console.log(`Adding ${TokenType[this.frontType()]} to ${result.kind}`);
@@ -1429,15 +1441,15 @@ class Parser {
             console.log("Going to run parseExpression");
             let expr: Ast = this.parseExpression();
 
-            if (this.skip(TokenType.T_PARENTHESIS_OPEN)) {
-                this.skipWhitespace();
+            // if (this.skip(TokenType.T_PARENTHESIS_OPEN)) {
+            //     this.skipWhitespace();
 
-                const args: Array<Ast> = this.parseExpressions();
+            //     const args: Array<Ast> = this.parseExpressions();
 
-                this.expect(TokenType.T_PARENTHESIS_CLOSE);
+            //     this.expect(TokenType.T_PARENTHESIS_CLOSE);
 
-                expr = new AstCallExpression(expr, args);
-            }
+            //     expr = new AstCallExpression(expr, args);
+            // }
             return new AstExpressionStatement(expr);
         } else {
             throw new Error(`Unexpected token ${TokenType[ft]}`);
