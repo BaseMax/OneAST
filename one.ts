@@ -95,6 +95,11 @@ enum TokenType {
     T_STRING_SINGLE_QUOTE = 25,
     T_STRING_DOUBLE_QUOTE = 26,
 
+    T_TRUE = 27,
+    T_FALSE = 28,
+    T_NULL = 29,
+    T_UNDEFINED = 30,
+
     T_ECHO,
     T_IF,
     T_ELSE,
@@ -159,6 +164,11 @@ class Lexer {
         "while": TokenType.T_WHILE,
         "return": TokenType.T_RETURN,
         "echo": TokenType.T_ECHO,
+
+        "true": TokenType.T_TRUE,
+        "false": TokenType.T_FALSE,
+        "null": TokenType.T_NULL,
+        "undefined": TokenType.T_UNDEFINED,
     };
 
     location: LocationInfo = new LocationInfo();
@@ -703,6 +713,14 @@ class Parser {
         if (ft === TokenType.T_NUMBER) {
             const t: Token = this.expect(TokenType.T_NUMBER);
             return new AstLiteralExpression("number", t.value);
+        } else if (ft === TokenType.T_TRUE || ft === TokenType.T_FALSE) {
+            const t: Token = this.expectOneOf([
+                TokenType.T_TRUE,
+                TokenType.T_FALSE
+            ]);
+            return new AstLiteralExpression("boolean", t.type === TokenType.T_TRUE ? "true" : "false");
+        } else if (ft === TokenType.T_IDENTIFIER) {
+            return this.parseIdentifier();
         } else if (ft === TokenType.T_STRING_DOUBLE_QUOTE) {
             const t: Token = this.expect(TokenType.T_STRING_DOUBLE_QUOTE);
             return new AstLiteralExpression("string_double", t.value);
@@ -710,7 +728,7 @@ class Parser {
             const t: Token = this.expect(TokenType.T_STRING_SINGLE_QUOTE);
             return new AstLiteralExpression("string_single", t.value);
         } else {
-            throw new Error(`Unexpected token ${ft}`);
+            throw new Error(`Unexpected token ${TokenType[ft]}`);
         }
     }
 
@@ -764,7 +782,7 @@ class Parser {
         return expr;
     }
 
-    expectOneOf(tokens: Array<TokenType>): Token | null {
+    expectOneOf(tokens: Array<TokenType>): Token {
         let res: Token | null = null;
 
         for (let i = 0; i < tokens.length; i++) {
@@ -777,7 +795,6 @@ class Parser {
 
         if (res === null) {
             throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
-            return null;
         }
         return res;
     }
@@ -925,7 +942,7 @@ class Parser {
 
         const ft = this.frontType();
         // console.log("parseExpression: ft is:", TokenType[ft]);
-        if (ft === TokenType.T_NUMBER || ft === TokenType.T_STRING_DOUBLE_QUOTE || ft === TokenType.T_STRING_SINGLE_QUOTE) {
+        if (ft === TokenType.T_IDENTIFIER || ft === TokenType.T_NUMBER || ft === TokenType.T_STRING_DOUBLE_QUOTE || ft === TokenType.T_STRING_SINGLE_QUOTE || ft === TokenType.T_TRUE || ft === TokenType.T_FALSE || ft === TokenType.T_NULL || ft === TokenType.T_UNDEFINED) {
             result = this.parseExpressionLiteral();
         } else if (ft === TokenType.T_PARENTHESIS_OPEN) {
             result = this.parseSubExpression();
@@ -960,6 +977,25 @@ class Parser {
         return result;
     }
 
+    is_value(ft: TokenType): boolean {
+        return ft === TokenType.T_IDENTIFIER ||
+
+               ft === TokenType.T_TRUE ||
+               ft === TokenType.T_FALSE ||
+               ft === TokenType.T_NULL ||
+               ft === TokenType.T_UNDEFINED ||
+
+               ft === TokenType.T_NUMBER ||
+               ft === TokenType.T_STRING_DOUBLE_QUOTE ||
+               ft === TokenType.T_STRING_SINGLE_QUOTE ||
+
+               ft === TokenType.T_OPERATOR_BANG ||
+               ft === TokenType.T_PARENTHESIS_OPEN ||
+
+               ft === TokenType.T_OPERATOR_PLUS ||
+               ft === TokenType.T_OPERATOR_MINUS;
+    }
+
     parseStatement(): Ast | null {
         const ft = this.frontType();
         if (ft === TokenType.T_WHITESPACE || ft === TokenType.T_SEMICOLON) {
@@ -969,7 +1005,7 @@ class Parser {
             return this.parseIf();
         } else if (ft === TokenType.T_ECHO) {
             return this.parseEcho();
-        } else if (ft === TokenType.T_IDENTIFIER || ft === TokenType.T_NUMBER || ft === TokenType.T_OPERATOR_BANG || ft === TokenType.T_PARENTHESIS_OPEN || ft === TokenType.T_STRING_DOUBLE_QUOTE || ft === TokenType.T_STRING_SINGLE_QUOTE || ft === TokenType.T_OPERATOR_PLUS || ft === TokenType.T_OPERATOR_MINUS) {
+        } else if (this.is_value(ft)) {
             return new AstExpressionStatement(this.parseExpression());
         } else {
             throw new Error(`Unexpected token ${TokenType[ft]}`);
@@ -1039,7 +1075,8 @@ function main(): void
     // const source_code = "echo 110*10+10;";
     // const source_code = "echo 10+110*10;";
     // const source_code = "10+110*10;";
-    const source_code = "'hey';";
+    // const source_code = "'hey';";
+    const source_code = "true and false;";
     input.setData(source_code);
     console.log(input);
 
