@@ -131,6 +131,8 @@ enum TokenType {
     T_DO,
     T_WHILE,
     T_RETURN,
+
+    T_OPERATOR_DIVIDE_INTEGER,
 }
 
 class Token {
@@ -319,11 +321,16 @@ class Lexer {
             }
             return this.createToken(TokenType.T_OPERATOR_MULTIPLY);
         }
+        else if (c === "#") {
+            this.nextIndex(1);
+            return this.createToken(TokenType.T_INLINE_COMMENT, this.readInlineComment());
+        }
         else if (c === "/") {
             this.nextIndex(1);
             if (this.getChar() === "/") {
                 this.nextIndex(1);
-                return this.createToken(TokenType.T_INLINE_COMMENT, this.readInlineComment());
+                return this.createToken(TokenType.T_OPERATOR_DIVIDE_INTEGER);
+                // return this.createToken(TokenType.T_INLINE_COMMENT, this.readInlineComment());
             } else if (this.getChar() === "=") {
                 this.nextIndex(1);
                 return this.createToken(TokenType.T_OPERATOR_ASSIGN_DIVIDE);
@@ -846,6 +853,9 @@ class Interpreter {
             case TokenType.T_OPERATOR_DIVIDE:
                 code += this.interpretExpression(expression.left) + " / " + this.interpretExpression(expression.right);
                 break;
+            case TokenType.T_OPERATOR_DIVIDE_INTEGER:
+                code += this.interpretExpression(expression.left) + " / " + this.interpretExpression(expression.right);
+                break;
             case TokenType.T_OPERATOR_MODULO:
                 code += this.interpretExpression(expression.left) + " % " + this.interpretExpression(expression.right);
                 break;
@@ -905,6 +915,9 @@ class Interpreter {
                 break;
             case TokenType.T_OPERATOR_ASSIGN_BIT_RIGHT_SHIFT:
                 code += this.interpretExpression(expression.left) + " >>= " + this.interpretExpression(expression.right);
+                break;
+            case TokenType.T_OPERATOR_MODULO:
+                code += this.interpretExpression(expression.left) + " % " + this.interpretExpression(expression.right);
                 break;
         }
         
@@ -1262,6 +1275,7 @@ class Parser {
             TokenType.T_OPERATOR_MINUS,
             TokenType.T_OPERATOR_MULTIPLY,
             TokenType.T_OPERATOR_DIVIDE,
+            TokenType.T_OPERATOR_DIVIDE_INTEGER,
 
             TokenType.T_OPERATOR_AND,
             TokenType.T_OPERATOR_OR,
@@ -1298,7 +1312,7 @@ class Parser {
             case TokenType.T_OPERATOR_MINUS: return this.LeftAssociative(100);
             case TokenType.T_OPERATOR_MULTIPLY: return this.LeftAssociative(200);
             case TokenType.T_OPERATOR_DIVIDE: return this.LeftAssociative(200);
-            // case TokenType.T_POW: return this.LeftAssociative(99);
+            case TokenType.T_OPERATOR_DIVIDE_INTEGER: return this.LeftAssociative(200);
             case TokenType.T_OPERATOR_POWER: return this.RightAssociative(99);
             case TokenType.T_OPERATOR_QUESTION: return this.RightAssociative(1000);
 
@@ -1311,7 +1325,7 @@ class Parser {
 
             // --- Postfix --- (Always Right Associative)
             case TokenType.T_OPERATOR_BANG: return this.RightAssociative(400);
-            //Note: Postfix operators are always RightAssociative
+            // Note: Postfix operators are always RightAssociative
 
             default: return no_binding_power;
         }
