@@ -473,6 +473,7 @@ class Lexer {
 
     readStringSingle(): string {
         let s = "";
+
         let c = this.getChar();
         while (c !== "'") {
             s += c;
@@ -486,6 +487,7 @@ class Lexer {
 
     readStringDouble(): string {
         let s = "";
+
         let c = this.getChar();
         while (c !== "\"") {
             s += c;
@@ -507,8 +509,8 @@ class Lexer {
 
     readNumber() : Token {
         let number = "";
-        let c = this.getChar();
 
+        let c = this.getChar();
         while (c !== null && this.isDigit(c)) {
             number += c;
             c = this.nextChar();
@@ -518,20 +520,18 @@ class Lexer {
     }
 
     readIdentifier() : Token {
-        let c = this.getChar();
         let identifier = "";
 
+        let c = this.getChar();
         while (c !== null && this.isAlpha(c)) {
             identifier += c;
             c = this.nextChar();
         }
 
-        console.log(identifier, this.reservedWords);
-
-        if (this.reservedWords[identifier]) {
+        if (this.reservedWords[identifier])
             return this.createToken(this.reservedWords[identifier]);
-        }
-        return this.createToken(TokenType.T_IDENTIFIER, identifier);
+        else
+            return this.createToken(TokenType.T_IDENTIFIER, identifier);
     }
 
     getChar(): string | null {
