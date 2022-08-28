@@ -631,8 +631,13 @@ class AstStatement implements Ast {
     kind: string = "Statement";
 }
 
-class AstEcho implements Ast {
-    kind: string = "Echo";
+class AstEchoStatement implements Ast {
+    kind: string = "EchoStatement";
+    expressions: Array<Ast>;
+
+    constructor(expressions: Array<Ast>) {
+        this.expressions = expressions;
+    }
 }
 
 class AstTernaryExpression implements Ast {
@@ -1116,6 +1121,16 @@ class Interpreter {
         return code;
     }
 
+    interpretEchoStatement(statement: AstEchoStatement): string {
+        let code = "";
+
+        for (const expression of statement.expressions) {
+            code += "console.log(" + this.interpretExpression(expression) + ");\n";
+        }
+
+        return code;
+    }
+
     interpretStatement(statement: AstStatement): string {
         console.log("Stmt:", statement.kind, statement);
 
@@ -1125,6 +1140,9 @@ class Interpreter {
                 break;
             case "AssignmentExpression":
                 return this.interpretAssignmentExpression(statement as AstAssignmentExpression);
+                break;
+            case "EchoStatement":
+                return this.interpretEchoStatement(statement as AstEchoStatement);
                 break;
             case "CallExpression":
                 return this.interpretCallExpression(statement as AstCallExpression);
@@ -1242,9 +1260,8 @@ class Parser {
             this.expect(TokenType.T_PARENTHESIS_CLOSE);
         }
 
-        return new AstCallExpression(
-            new AstIdentifier("echo"),
-            exprs,
+        return new AstEchoStatement(
+            exprs
         );
     }
 
