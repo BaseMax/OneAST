@@ -61,8 +61,8 @@ enum TokenType {
     T_OPEN_BRACE = 8,
     T_CLOSE_BRACE = 9,
 
-    T_OPERATOR_PLUS = 10,
-    T_OPERATOR_MINUS = 11,
+    T_OPERATOR_ADD = 10,
+    T_OPERATOR_SUBTRACT = 11,
     T_OPERATOR_MULTIPLY = 12,
     T_OPERATOR_DIVIDE = 13,
     T_OPERATOR_ASSIGN = 14,
@@ -110,11 +110,11 @@ enum TokenType {
     T_OPERATOR_ASSIGN_MULTIPLY,
     T_OPERATOR_ASSIGN_DIVIDE,
     T_OPERATOR_ASSIGN_MODULO,
-    T_OPERATOR_ASSIGN_BIT_AND,
-    T_OPERATOR_ASSIGN_BIT_OR,
-    T_OPERATOR_ASSIGN_BIT_XOR,
-    T_OPERATOR_ASSIGN_BIT_LEFT_SHIFT,
-    T_OPERATOR_ASSIGN_BIT_RIGHT_SHIFT,
+    T_OPERATOR_ASSIGN_BITWISE_AND,
+    T_OPERATOR_ASSIGN_BITWISE_OR,
+    T_OPERATOR_ASSIGN_BITWISE_XOR,
+    T_OPERATOR_ASSIGN_BITWISE_LEFT_SHIFT,
+    T_OPERATOR_ASSIGN_BITWISE_RIGHT_SHIFT,
     T_OPERATOR_BIT_LEFT_SHIFT,
     T_OPERATOR_BIT_RIGHT_SHIFT,
 
@@ -299,7 +299,7 @@ class Lexer {
                 this.nextIndex(1);
                 return this.createToken(TokenType.T_OPERATOR_INCREASEMENT);
             }
-            return this.createToken(TokenType.T_OPERATOR_PLUS);
+            return this.createToken(TokenType.T_OPERATOR_ADD);
         }
         else if (c === "-") {
             this.nextIndex(1);
@@ -310,7 +310,7 @@ class Lexer {
                 this.nextIndex(1);
                 return this.createToken(TokenType.T_OPERATOR_DECREASEMENT);
             }
-            return this.createToken(TokenType.T_OPERATOR_MINUS);
+            return this.createToken(TokenType.T_OPERATOR_SUBTRACT);
         }
         else if (c === "*") {
             this.nextIndex(1);
@@ -400,7 +400,7 @@ class Lexer {
                 this.nextIndex(1);
                 if (this.getChar() === "=") {
                     this.nextIndex(1);
-                    return this.createToken(TokenType.T_OPERATOR_ASSIGN_BIT_RIGHT_SHIFT);
+                    return this.createToken(TokenType.T_OPERATOR_ASSIGN_BITWISE_RIGHT_SHIFT);
                 } else {
                     return this.createToken(TokenType.T_OPERATOR_BIT_RIGHT_SHIFT);
                 }
@@ -416,7 +416,7 @@ class Lexer {
                 this.nextIndex(1);
                 if (this.getChar() === "=") {
                     this.nextIndex(1);
-                    return this.createToken(TokenType.T_OPERATOR_ASSIGN_BIT_LEFT_SHIFT);
+                    return this.createToken(TokenType.T_OPERATOR_ASSIGN_BITWISE_LEFT_SHIFT);
                 } else {
                     return this.createToken(TokenType.T_OPERATOR_BIT_LEFT_SHIFT);
                 }
@@ -430,7 +430,7 @@ class Lexer {
             this.nextIndex(1);
             if (this.getChar() === "=") {
                 this.nextIndex(1);
-                return this.createToken(TokenType.T_OPERATOR_ASSIGN_BIT_XOR);
+                return this.createToken(TokenType.T_OPERATOR_ASSIGN_BITWISE_XOR);
             }
             return this.createToken(TokenType.T_OPERATOR_BIT_XOR);
         }
@@ -449,7 +449,7 @@ class Lexer {
                 return this.createToken(TokenType.T_OPERATOR_OR);
             } else if (this.getChar() === "=") {
                 this.nextIndex(1);
-                return this.createToken(TokenType.T_OPERATOR_ASSIGN_BIT_OR);
+                return this.createToken(TokenType.T_OPERATOR_ASSIGN_BITWISE_OR);
             }
             return this.createToken(TokenType.T_OPERATOR_BIT_OR);
         }
@@ -460,7 +460,7 @@ class Lexer {
                 return this.createToken(TokenType.T_OPERATOR_AND);
             } else if (this.getChar() === "=") {
                 this.nextIndex(1);
-                return this.createToken(TokenType.T_OPERATOR_ASSIGN_BIT_AND);
+                return this.createToken(TokenType.T_OPERATOR_ASSIGN_BITWISE_AND);
             }
             return this.createToken(TokenType.T_OPERATOR_BIT_AND);
         }
@@ -877,10 +877,10 @@ class Interpreter {
         let code = "";
 
         switch (expression.operator.type) {
-            case TokenType.T_OPERATOR_PLUS:
+            case TokenType.T_OPERATOR_ADD:
                 code += this.interpretExpression(expression.left) + " + " + this.interpretExpression(expression.right);
                 break;
-            case TokenType.T_OPERATOR_MINUS:
+            case TokenType.T_OPERATOR_SUBTRACT:
                 code += this.interpretExpression(expression.left) + " - " + this.interpretExpression(expression.right);
                 break;
             case TokenType.T_OPERATOR_MULTIPLY:
@@ -937,19 +937,19 @@ class Interpreter {
             case TokenType.T_OPERATOR_ASSIGN_MODULO:
                 code += this.interpretExpression(expression.left) + " %= " + this.interpretExpression(expression.right);
                 break;
-            case TokenType.T_OPERATOR_ASSIGN_BIT_AND:
+            case TokenType.T_OPERATOR_ASSIGN_BITWISE_AND:
                 code += this.interpretExpression(expression.left) + " &= " + this.interpretExpression(expression.right);
                 break;
-            case TokenType.T_OPERATOR_ASSIGN_BIT_OR:
+            case TokenType.T_OPERATOR_ASSIGN_BITWISE_OR:
                 code += this.interpretExpression(expression.left) + " |= " + this.interpretExpression(expression.right);
                 break;
-            case TokenType.T_OPERATOR_ASSIGN_BIT_XOR:
+            case TokenType.T_OPERATOR_ASSIGN_BITWISE_XOR:
                 code += this.interpretExpression(expression.left) + " ^= " + this.interpretExpression(expression.right);
                 break;
-            case TokenType.T_OPERATOR_ASSIGN_BIT_LEFT_SHIFT:
+            case TokenType.T_OPERATOR_ASSIGN_BITWISE_LEFT_SHIFT:
                 code += this.interpretExpression(expression.left) + " <<= " + this.interpretExpression(expression.right);
                 break;
-            case TokenType.T_OPERATOR_ASSIGN_BIT_RIGHT_SHIFT:
+            case TokenType.T_OPERATOR_ASSIGN_BITWISE_RIGHT_SHIFT:
                 code += this.interpretExpression(expression.left) + " >>= " + this.interpretExpression(expression.right);
                 break;
             case TokenType.T_OPERATOR_MODULO:
@@ -991,7 +991,7 @@ class Interpreter {
         code += this.interpretExpression(statement.callee);
         code += "(";
         code += statement.arguments.map(arg => this.interpretExpression(arg)).join(", ");
-        code += ")";
+        code += ");";
 
         return code;
     }
@@ -1005,11 +1005,111 @@ class Interpreter {
         return code;
     }
 
+    interpretOperator(op: TokenType): string {
+        switch (op) {
+            case TokenType.T_OPERATOR_ADD:
+                return "+";
+                break;
+            case TokenType.T_OPERATOR_SUBTRACT:
+                return "-";
+                break;
+            case TokenType.T_OPERATOR_MULTIPLY:
+                return "*";
+                break;
+            case TokenType.T_OPERATOR_DIVIDE:
+                return "/";
+                break;
+            case TokenType.T_OPERATOR_DIVIDE_INTEGER:
+                return "intDiv";
+                break;
+            case TokenType.T_OPERATOR_MODULO:
+                return "%";
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_EQUAL:
+                return "=";
+                break;
+            case TokenType.T_OPERATOR_NOT_EQUAL:
+                return "!=";
+                break;
+            case TokenType.T_OPERATOR_LESS_THAN:
+                return "<";
+                break;
+            case TokenType.T_OPERATOR_LESS_THAN_EQUAL:
+                return "<=";
+                break;
+            case TokenType.T_OPERATOR_GREATER_THAN:
+                return ">";
+                break;
+            case TokenType.T_OPERATOR_GREATER_THAN_EQUAL:
+                return ">=";
+                break;
+            case TokenType.T_OPERATOR_AND:
+                return "&&";
+                break;
+            case TokenType.T_OPERATOR_OR:
+                return "||";
+                break;
+            case TokenType.T_OPERATOR_ASSIGN:
+                return "=";
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_ADD:
+                return "+=";
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_SUBTRACT:
+                return "-=";
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_MULTIPLY:
+                return "*=";
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_DIVIDE:
+                return "/=";
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_MODULO:
+                return "%=";
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_BITWISE_AND:
+                return "&=";
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_BITWISE_OR:
+                return "|=";
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_BITWISE_XOR:
+                return "^=";
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_BITWISE_LEFT_SHIFT:
+                return "<<=";
+                break;
+            case TokenType.T_OPERATOR_ASSIGN_BITWISE_RIGHT_SHIFT:
+                return ">>=";
+                break;
+            case TokenType.T_OPERATOR_AND:
+                return "&";
+                break;
+            case TokenType.T_OPERATOR_OR:
+                return "|";
+                break;
+            case TokenType.T_OPERATOR_BIT_XOR:
+                return "^";
+                break;
+            case TokenType.T_OPERATOR_BIT_LEFT_SHIFT:
+                return "<<";
+                break;
+            case TokenType.T_OPERATOR_BIT_RIGHT_SHIFT:
+                return ">>";
+                break;
+            default:
+                throw new Error("Unsupported operator: " + op);
+        }
+        return "Unknown";
+    }
+
     interpretAssignmentExpression(statement: AstAssignmentExpression): string {
         let code = "";
 
         code += this.interpretExpression(statement.left);
-        code += " = ";
+        code += " ";
+        code += this.interpretOperator(statement.operator);
+        code += " ";
         code += this.interpretExpression(statement.right);
         code += ";\n";
 
@@ -1317,8 +1417,8 @@ class Parser {
 
     parsePrefixExpression(min_bp: number): Ast {
         let operator: Token | null = this.expectOneOf([
-            TokenType.T_OPERATOR_PLUS,
-            TokenType.T_OPERATOR_MINUS,
+            TokenType.T_OPERATOR_ADD,
+            TokenType.T_OPERATOR_SUBTRACT,
         ]);
         if (operator === null) {
             throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
@@ -1333,16 +1433,16 @@ class Parser {
     // Look up the right binding power of a given prefix operator
     prefix_bp_lookup(whichOperator: TokenType): number {
         switch(whichOperator) {
-            case TokenType.T_OPERATOR_PLUS: return 300;
-            case TokenType.T_OPERATOR_MINUS: return 300;
+            case TokenType.T_OPERATOR_ADD: return 300;
+            case TokenType.T_OPERATOR_SUBTRACT: return 300;
             default: return 0;
         }
     }
     
     parsePostfixExpression(lhs: Ast): Ast {
         let operator: Token | null = this.expectOneOf([
-            TokenType.T_OPERATOR_PLUS,
-            TokenType.T_OPERATOR_MINUS,
+            TokenType.T_OPERATOR_ADD,
+            TokenType.T_OPERATOR_SUBTRACT,
         ]);
         if (operator === null) {
             throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
@@ -1375,8 +1475,8 @@ class Parser {
         console.log("parseBinaryExpression: looking for right side of binary expression", min_bp);
         let lhs: Ast = _lhs;
         let operator: Token | null = this.expectOneOf([
-            TokenType.T_OPERATOR_PLUS,
-            TokenType.T_OPERATOR_MINUS,
+            TokenType.T_OPERATOR_ADD,
+            TokenType.T_OPERATOR_SUBTRACT,
             TokenType.T_OPERATOR_MULTIPLY,
             TokenType.T_OPERATOR_DIVIDE,
             TokenType.T_OPERATOR_DIVIDE_INTEGER,
@@ -1424,8 +1524,8 @@ class Parser {
             case TokenType.T_OPERATOR_BIT_AND: return this.LeftAssociative(500);
             case TokenType.T_OPERATOR_BIT_OR: return this.LeftAssociative(600);
 
-            case TokenType.T_OPERATOR_PLUS: return this.LeftAssociative(100);
-            case TokenType.T_OPERATOR_MINUS: return this.LeftAssociative(100);
+            case TokenType.T_OPERATOR_ADD: return this.LeftAssociative(100);
+            case TokenType.T_OPERATOR_SUBTRACT: return this.LeftAssociative(100);
             case TokenType.T_OPERATOR_MULTIPLY: return this.LeftAssociative(200);
             case TokenType.T_OPERATOR_DIVIDE: return this.LeftAssociative(200);
             case TokenType.T_OPERATOR_DIVIDE_INTEGER: return this.LeftAssociative(200);
@@ -1473,7 +1573,7 @@ class Parser {
             result = this.parseExpressionLiteral();
         } else if (ft === TokenType.T_PARENTHESIS_OPEN) {
             result = this.parseSubExpression();
-        } else if (this.has(TokenType.T_OPERATOR_PLUS) || this.has(TokenType.T_OPERATOR_MINUS)) {
+        } else if (this.has(TokenType.T_OPERATOR_ADD) || this.has(TokenType.T_OPERATOR_SUBTRACT)) {
             result = this.parsePrefixExpression(this.prefix_bp_lookup(ft));
         } else {
             throw new Error(`parseExpression: Unexpected token ${TokenType[ft]}`);
@@ -1528,8 +1628,8 @@ class Parser {
                ft === TokenType.T_OPERATOR_BANG ||
                ft === TokenType.T_PARENTHESIS_OPEN ||
 
-               ft === TokenType.T_OPERATOR_PLUS ||
-               ft === TokenType.T_OPERATOR_MINUS;
+               ft === TokenType.T_OPERATOR_ADD ||
+               ft === TokenType.T_OPERATOR_SUBTRACT;
     }
 
     parseStatement(): Ast | null {
@@ -1547,11 +1647,25 @@ class Parser {
             console.log("Going to run parseExpression");
             let expr: Ast = this.parseExpression();
 
-            if (this.skip(TokenType.T_OPERATOR_ASSIGN)) {
+            // T_OPERATOR_ASSIGN_MULTIPLY
+            const ft = this.frontType();
+            if (this.skipOneOf([
+                TokenType.T_OPERATOR_ASSIGN,
+                TokenType.T_OPERATOR_ASSIGN_ADD,
+                TokenType.T_OPERATOR_ASSIGN_SUBTRACT,
+                TokenType.T_OPERATOR_ASSIGN_MULTIPLY,
+                TokenType.T_OPERATOR_ASSIGN_DIVIDE,
+                TokenType.T_OPERATOR_ASSIGN_MODULO,
+                TokenType.T_OPERATOR_ASSIGN_BITWISE_AND,
+                TokenType.T_OPERATOR_ASSIGN_BITWISE_OR,
+                TokenType.T_OPERATOR_ASSIGN_BITWISE_XOR,
+                TokenType.T_OPERATOR_ASSIGN_BITWISE_LEFT_SHIFT,
+                TokenType.T_OPERATOR_ASSIGN_BITWISE_RIGHT_SHIFT,
+            ])) {
                 this.skipWhitespace();
                 const value: Ast = this.parseExpression();
 
-                return new AstAssignmentExpression(TokenType.T_OPERATOR_ASSIGN, expr, value);
+                return new AstAssignmentExpression(ft, expr, value);
             } else {
                 return new AstExpressionStatement(expr);
             }
@@ -1646,6 +1760,7 @@ function main(): void
         i = i + 1;
     }
     i = i + 1;
+    i *= 10;
     `;
     input.setData(source_code);
     console.log(input);
