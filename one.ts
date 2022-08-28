@@ -17,6 +17,39 @@ function assert(predicate: boolean): asserts predicate is true {
 
 interface binding_power { left_power: number; right_power: number; }
 
+class Scope {
+    variables: Record<string, any>;
+    // functions: Record<string, any>;
+    parent: Scope | null;
+
+    constructor(parent: Scope | null) {
+        this.variables = {};
+        this.parent = parent;
+    }
+
+    get(name: string): any {
+        if (this.variables[name]) {
+            return this.variables[name];
+        } else if (this.parent) {
+            return this.parent.get(name);
+        } else {
+            throw new Error(`Variable ${name} not found`);
+        }
+    }
+
+    set(name: string, value: any): void {
+        this.variables[name] = value;
+    }
+
+    has(name: string): boolean {
+        return this.variables[name] !== undefined;
+    }
+
+    create_child(): Scope {
+        return new Scope(this);
+    }
+}
+
 class Input {
     file: string | null = null;
     path: string | null = null;
@@ -820,9 +853,11 @@ class AstEmptyStatement implements Ast {
 class AstBlock implements Ast {
     kind: string = "BlockStatement";
     statements: Array<Ast>;
+    scope: Scope;
 
-    constructor(statements: Array<Ast>) {
+    constructor(statements: Array<Ast>, parent: Scope | null) {
         this.statements = statements;
+        this.scope = new Scope(parent);
     }
 }
 
@@ -867,101 +902,101 @@ class Interpreter {
             return "";
         }
 
-        return this.interpretStatements(this.ast.body);
+        return this.interpretStatements(this.ast.body, new AstBlock([], null));
     }
 
-    interpretStatements(statements: AstStatement[]): string {
+    interpretStatements(statements: AstStatement[], parent: AstBlock): string {
         let code = "";
         for (let statement of statements) {
-            code += this.interpretStatement(statement);
+            code += this.interpretStatement(statement as AstStatement, parent as AstBlock);
         }
         return code;
     }
 
-    interpretBinaryExpression(expression: AstBinaryExpression): string {
+    interpretBinaryExpression(expression: AstBinaryExpression, parent: AstBlock): string {
         let code = "";
 
         switch (expression.operator.type) {
             case TokenType.T_OPERATOR_ADD:
-                code += this.interpretExpression(expression.left) + " + " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " + " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_SUBTRACT:
-                code += this.interpretExpression(expression.left) + " - " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " - " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_MULTIPLY:
-                code += this.interpretExpression(expression.left) + " * " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " * " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_DIVIDE:
-                code += this.interpretExpression(expression.left) + " / " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " / " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_DIVIDE_INTEGER:
-                code += this.interpretExpression(expression.left) + " / " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " / " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_MODULO:
-                code += this.interpretExpression(expression.left) + " % " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " % " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_ASSIGN_EQUAL:
-                code += this.interpretExpression(expression.left) + " == " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " == " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_NOT_EQUAL:
-                code += this.interpretExpression(expression.left) + " != " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " != " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_LESS_THAN:
-                code += this.interpretExpression(expression.left) + " < " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " < " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_LESS_THAN_EQUAL:
-                code += this.interpretExpression(expression.left) + " <= " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " <= " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_GREATER_THAN:
-                code += this.interpretExpression(expression.left) + " > " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " > " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_GREATER_THAN_EQUAL:
-                code += this.interpretExpression(expression.left) + " >= " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " >= " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_AND:
-                code += this.interpretExpression(expression.left) + " && " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " && " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_OR:
-                code += this.interpretExpression(expression.left) + " || " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " || " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_ASSIGN:
-                code += this.interpretExpression(expression.left) + " = " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " = " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_ASSIGN_ADD:
-                code += this.interpretExpression(expression.left) + " += " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " += " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_ASSIGN_SUBTRACT:
-                code += this.interpretExpression(expression.left) + " -= " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " -= " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_ASSIGN_MULTIPLY:
-                code += this.interpretExpression(expression.left) + " *= " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " *= " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_ASSIGN_DIVIDE:
-                code += this.interpretExpression(expression.left) + " /= " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " /= " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_ASSIGN_MODULO:
-                code += this.interpretExpression(expression.left) + " %= " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " %= " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_ASSIGN_BITWISE_AND:
-                code += this.interpretExpression(expression.left) + " &= " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " &= " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_ASSIGN_BITWISE_OR:
-                code += this.interpretExpression(expression.left) + " |= " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " |= " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_ASSIGN_BITWISE_XOR:
-                code += this.interpretExpression(expression.left) + " ^= " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " ^= " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_ASSIGN_BITWISE_LEFT_SHIFT:
-                code += this.interpretExpression(expression.left) + " <<= " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " <<= " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_ASSIGN_BITWISE_RIGHT_SHIFT:
-                code += this.interpretExpression(expression.left) + " >>= " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " >>= " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_MODULO:
-                code += this.interpretExpression(expression.left) + " % " + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + " % " + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
             case TokenType.T_OPERATOR_DOT:
-                code += this.interpretExpression(expression.left) + "." + this.interpretExpression(expression.right);
+                code += this.interpretExpression(expression.left, parent as AstBlock) + "." + this.interpretExpression(expression.right, parent as AstBlock);
                 break;
         }
         
@@ -969,7 +1004,7 @@ class Interpreter {
         return code;
     }
 
-    interpretExpression(expression: Ast): string {
+    interpretExpression(expression: Ast, parent: AstBlock): string {
         switch (expression.kind) {
             case "Identifier":
                 return (expression as AstIdentifier).name;
@@ -978,10 +1013,10 @@ class Interpreter {
                 return (expression as AstLiteralExpression).value;
                 break;
             case "BinaryExpression":
-                return this.interpretBinaryExpression(expression as AstBinaryExpression);
+                return this.interpretBinaryExpression(expression as AstBinaryExpression, parent as AstBlock);
                 break;
             case "CallExpression":
-                return this.interpretCallExpression(expression as AstCallExpression);
+                return this.interpretCallExpression(expression as AstCallExpression, parent as AstBlock);
                 break;
             default:
                 throw new Error("Unsupported expression: " + expression.kind);
@@ -990,21 +1025,21 @@ class Interpreter {
         return "";
     }
 
-    interpretCallExpression(statement: AstCallExpression): string {
+    interpretCallExpression(statement: AstCallExpression, parent: AstBlock): string {
         let code = "";
 
-        code += this.interpretExpression(statement.callee);
+        code += this.interpretExpression(statement.callee, parent as AstBlock);
         code += "(";
-        code += statement.arguments.map(arg => this.interpretExpression(arg)).join(", ");
+        code += statement.arguments.map(arg => this.interpretExpression(arg as AstExpression, parent as AstBlock)).join(", ");
         code += ");";
 
         return code;
     }
 
-    interpretExpressionStatement(statement: AstExpressionStatement): string {
+    interpretExpressionStatement(statement: AstExpressionStatement, parent: AstBlock): string {
         let code = "";
 
-        code += this.interpretExpression(statement.expression);
+        code += this.interpretExpression(statement.expression as AstExpression, parent as AstBlock);
         code += ";\n";
 
         return code;
@@ -1107,104 +1142,100 @@ class Interpreter {
         }
     }
 
-    interpretAssignmentExpression(statement: AstAssignmentExpression): string {
+    interpretAssignmentExpression(statement: AstAssignmentExpression, parent: AstBlock): string {
         let code = "";
 
-        code += this.interpretExpression(statement.left);
+        code += this.interpretExpression(statement.left as AstExpression, parent as AstBlock);
         code += " ";
-        code += this.interpretOperator(statement.operator);
+        code += this.interpretOperator(statement.operator as TokenType);
         code += " ";
-        code += this.interpretExpression(statement.right);
+        code += this.interpretExpression(statement.right as AstExpression, parent as AstBlock);
         code += ";\n";
 
         return code;
     }
 
-    interpretEchoStatement(statement: AstEchoStatement): string {
+    interpretEchoStatement(statement: AstEchoStatement, parent: AstBlock): string {
         let code = "";
 
         for (const expression of statement.expressions) {
-            code += "console.log(" + this.interpretExpression(expression) + ");\n";
+            code += "console.log(" + this.interpretExpression(expression as AstExpression, parent as AstBlock) + ");\n";
         }
 
         return code;
     }
 
-    interpretEmptyStatement(statement: AstEmptyStatement): string {
+    interpretEmptyStatement(statement: AstEmptyStatement, parent: AstBlock): string {
         return ";";
     }
 
-    interpretStatement(statement: AstStatement): string {
+    interpretStatement(statement: AstStatement, parent: AstStatement): string {
         console.log("Stmt:", statement.kind, statement);
 
         switch (statement.kind) {
             case "ExpressionStatement":
-                return this.interpretExpressionStatement(statement as AstExpressionStatement);
+                return this.interpretExpressionStatement(statement as AstExpressionStatement, parent as AstBlock);
                 break;
             case "AssignmentExpression":
-                return this.interpretAssignmentExpression(statement as AstAssignmentExpression);
+                return this.interpretAssignmentExpression(statement as AstAssignmentExpression, parent as AstBlock);
                 break;
             case "EchoStatement":
-                return this.interpretEchoStatement(statement as AstEchoStatement);
+                return this.interpretEchoStatement(statement as AstEchoStatement, parent as AstBlock);
                 break;
             case "CallExpression":
-                return this.interpretCallExpression(statement as AstCallExpression);
+                return this.interpretCallExpression(statement as AstCallExpression, parent as AstBlock);
                 break;
             case "BlockStatement":
-                return this.interpretBlockStatement(statement as AstBlock);
+                return this.interpretBlockStatement(statement as AstBlock, parent as AstBlock);
                 break;
             case "IfStatement":
-                return this.interpretIfStatement(statement as AstIfStatement);
+                return this.interpretIfStatement(statement as AstIfStatement, parent as AstBlock);
                 break;
             case "WhileStatement":
-                return this.interpretWhileStatement(statement as AstWhileStatement);
+                return this.interpretWhileStatement(statement as AstWhileStatement, parent as AstBlock);
                 break;
             case "EmptyStatement":
-                return this.interpretEmptyStatement(statement as AstEmptyStatement);
+                return this.interpretEmptyStatement(statement as AstEmptyStatement, parent as AstBlock);
                 break;
             default:
                 throw new Error("Unknown statement kind: " + statement.kind);
         }
     }
 
-    interpretWhileStatement(statement: AstWhileStatement): string {
+    interpretWhileStatement(statement: AstWhileStatement, parent: AstBlock): string {
         let code = "";
 
-        code += "while (" + this.interpretExpression(statement.condition) + ") ";
-        code += this.interpretBlockStatement(statement.body as AstBlock);
+        code += "while (" + this.interpretExpression(statement.condition as AstExpression, parent as AstBlock) + ") ";
+        code += this.interpretBlockStatement(statement.body as AstBlock, parent as AstBlock);
 
         return code;
     }
 
-    interpretIfStatement(statement: AstIfStatement): string {
+    interpretIfStatement(statement: AstIfStatement, parent: AstBlock): string {
         let code = "";
 
-        const test: string = this.interpretExpression(statement.test as AstExpression);
+        const test: string = this.interpretExpression(statement.test as AstExpression, parent as AstBlock);
 
         code += "if (" + test + ") ";
-        code += this.interpretBlockStatement(statement.consequent as AstBlock);
+        code += this.interpretBlockStatement(statement.consequent as AstBlock, parent as AstBlock);
 
         if (statement.alternate) {
             code += " else ";
             if (statement.alternate.kind !== "IfStatement" && statement.alternate.kind !== "BlockStatement" && statement.alternate.kind !== "EmptyStatement") {
                 throw new Error("Unsupported statement: " + statement.alternate.kind);
             }
-            
-            if (statement.alternate.kind === "BlockStatement") code += "{";
-            code += this.interpretStatement(statement.alternate as AstBlock);
-            if (statement.alternate.kind === "BlockStatement") code += "}";
+
+            code += this.interpretStatement(statement.alternate as AstStatement, parent as AstBlock);
         }
 
         return code;
     }
 
-    interpretBlockStatement(block: AstBlock): string {
+    interpretBlockStatement(block: AstBlock, parent: AstBlock): string {
         let code = "";
 
         code += "{";
-        for (let statement of block.statements) {
-            code += this.interpretStatement(statement as AstStatement);
-        }
+        code += this.interpretStatements(block.statements as Array<AstStatement>, parent as AstBlock);
         code += "}";
 
         return code;
@@ -1310,7 +1341,7 @@ class Parser {
             if (ast !== null) statements.push(ast);
         }
 
-        return new AstBlock(statements);
+        return new AstBlock(statements as Array<AstStatement>, null);
     }
 
     parseWhile(): Ast {
@@ -1471,9 +1502,7 @@ class Parser {
         return new AstTernaryExpression(clause, consequent, alternate);
     }
     
-    parseBinaryExpression(_lhs: Ast, min_bp: number): Ast {
-        const lhs: Ast = _lhs;
-
+    parseBinaryExpression(lhs: Ast, min_bp: number): Ast {
         const operator: Token | null = this.expectOneOf([
             TokenType.T_OPERATOR_ADD,
             TokenType.T_OPERATOR_SUBTRACT,
@@ -1514,7 +1543,6 @@ class Parser {
     bp_lookup(whichOperator: TokenType): binding_power {
         const no_binding_power: binding_power = {left_power: 0, right_power: 0};
 
-        console.log(`bp_lookup: ${whichOperator}, ${TokenType[whichOperator]}`);
         switch (whichOperator) {
             case TokenType.T_PARENTHESIS_OPEN: return this.RightAssociative(997);
             case TokenType.T_OPERATOR_DOT: return this.RightAssociative(999);
