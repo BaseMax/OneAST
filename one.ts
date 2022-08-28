@@ -1105,7 +1105,6 @@ class Interpreter {
             default:
                 throw new Error("Unsupported operator: " + op);
         }
-        return "Unknown";
     }
 
     interpretAssignmentExpression(statement: AstAssignmentExpression): string {
@@ -1161,12 +1160,11 @@ class Interpreter {
                 return this.interpretWhileStatement(statement as AstWhileStatement);
                 break;
             case "EmptyStatement":
-                return this.interpretEmptyStatement(statement);
+                return this.interpretEmptyStatement(statement as AstEmptyStatement);
                 break;
             default:
                 throw new Error("Unknown statement kind: " + statement.kind);
         }
-        return "";
     }
 
     interpretWhileStatement(statement: AstWhileStatement): string {
@@ -1181,7 +1179,7 @@ class Interpreter {
     interpretIfStatement(statement: AstIfStatement): string {
         let code = "";
 
-        const test: string = this.interpretExpression(statement.test);
+        const test: string = this.interpretExpression(statement.test as AstExpression);
 
         code += "if (" + test + ") ";
         code += this.interpretBlockStatement(statement.consequent as AstBlock);
@@ -1205,7 +1203,7 @@ class Interpreter {
 
         code += "{";
         for (let statement of block.statements) {
-            code += this.interpretStatement(statement);
+            code += this.interpretStatement(statement as AstStatement);
         }
         code += "}";
 
@@ -1305,11 +1303,13 @@ class Parser {
 
         this.expect(TokenType.T_OPEN_BRACE);
         this.skipWhitespace();
+
         let statements: AstStatement[] = [];
         while (!this.isEOF() && !this.skip(TokenType.T_CLOSE_BRACE)) {
             const ast: Ast | null = this.parseStatement();
             if (ast !== null) statements.push(ast);
         }
+
         return new AstBlock(statements);
     }
 
@@ -1416,7 +1416,7 @@ class Parser {
     }
 
     parsePrefixExpression(min_bp: number): Ast {
-        let operator: Token | null = this.expectOneOf([
+        const operator: Token | null = this.expectOneOf([
             TokenType.T_OPERATOR_ADD,
             TokenType.T_OPERATOR_SUBTRACT,
         ]);
@@ -1432,7 +1432,7 @@ class Parser {
 
     // Look up the right binding power of a given prefix operator
     prefix_bp_lookup(whichOperator: TokenType): number {
-        switch(whichOperator) {
+        switch (whichOperator) {
             case TokenType.T_OPERATOR_ADD: return 300;
             case TokenType.T_OPERATOR_SUBTRACT: return 300;
             default: return 0;
@@ -1440,7 +1440,7 @@ class Parser {
     }
     
     parsePostfixExpression(lhs: Ast): Ast {
-        let operator: Token | null = this.expectOneOf([
+        const operator: Token | null = this.expectOneOf([
             TokenType.T_OPERATOR_ADD,
             TokenType.T_OPERATOR_SUBTRACT,
         ]);
@@ -1459,22 +1459,22 @@ class Parser {
         this.expect(TokenType.T_OPERATOR_QUESTION);
         this.skipWhitespace();
 
-        let consequent: Ast = this.parseExpression(0);
+        const consequent: Ast = this.parseExpression(0);
         this.skipWhitespace();
 
         this.expect(TokenType.T_OPERATOR_COLON);
         this.skipWhitespace();
 
-        let alternate: Ast = this.parseExpression(0);
+        const alternate: Ast = this.parseExpression(0);
         this.skipWhitespace();
 
         return new AstTernaryExpression(clause, consequent, alternate);
     }
     
     parseBinaryExpression(_lhs: Ast, min_bp: number): Ast {
-        let lhs: Ast = _lhs;
+        const lhs: Ast = _lhs;
 
-        let operator: Token | null = this.expectOneOf([
+        const operator: Token | null = this.expectOneOf([
             TokenType.T_OPERATOR_ADD,
             TokenType.T_OPERATOR_SUBTRACT,
             TokenType.T_OPERATOR_MULTIPLY,
@@ -1498,7 +1498,7 @@ class Parser {
 
         this.skipWhitespace();
 
-        let rhs: Ast = this.parseExpression(min_bp);
+        const rhs: Ast = this.parseExpression(min_bp);
 
         return new AstBinaryExpression(operator, lhs, rhs);
     }
@@ -1549,7 +1549,7 @@ class Parser {
     }
 
     parseExpressions(): Array<Ast> {
-        let expressions: Array<Ast> = [];
+        const expressions: Array<Ast> = [];
 
         while (!this.isEOF()) {
             expressions.push(this.parseExpression());
@@ -1642,7 +1642,7 @@ class Parser {
         } else if (ft === TokenType.T_ECHO) {
             return this.parseEcho();
         } else if (this.is_value(ft)) {
-            let expr: Ast = this.parseExpression();
+            const expr: Ast = this.parseExpression();
 
             const ft = this.frontType();
             if (this.skipOneOf([
@@ -1695,10 +1695,11 @@ class Parser {
     }
     
     expect(looking_for: TokenType): Token {
-        let ft: TokenType = this.frontType();
+        const ft: TokenType = this.frontType();
         if (ft !== looking_for) {
             throw new Error(`Expected ${TokenType[looking_for]} but got ${TokenType[ft]}`);
         }
+
         const f: Token = this.front();
         this.goNextToken();
         return f;
