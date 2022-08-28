@@ -1208,10 +1208,12 @@ class Parser {
 
     parse() {
         let statements: AstStatement[] = [];
+
         while (!this.isEOF()) {
             const ast: Ast | null = this.parseStatement();
             if (ast !== null) statements.push(ast);
         }
+
         return new AstProgram(statements, this.location);
     }
     
@@ -1219,28 +1221,7 @@ class Parser {
         let ident: Token = this.expect(TokenType.T_IDENTIFIER);
         this.skipWhitespace();
 
-        // if (this.skip(TokenType.T_OPERATOR_ASSIGN)) {
-        //     this.skipWhitespace();
-
-        //     let expr: any = this.parseExpression();
-
-        //     return new AstAssignmentExpression(
-        //         "=",
-        //         new AstIdentifier(ident.value),
-        //         expr
-        //     );
-        // }
-        // else if (this.skip(TokenType.T_OPERATOR_DOT)) {
-        //     this.skipWhitespace();
-        //     let expr: any = this.parseExpression();
-        //     return new AstMemberExpression(
-        //         new AstIdentifier(ident.value),
-        //         expr
-        //     );
-        // }
-        // else {
-            return new AstIdentifier(ident.value);
-        // }
+        return new AstIdentifier(ident.value);
     }
 
     parseEcho(): Ast {
@@ -1348,12 +1329,13 @@ class Parser {
 
             if (this.has(TokenType.T_OPEN_BRACE) || this.has(TokenType.T_SEMICOLON)) {
                 alternate = this.parseBlock();
-            } else if(this.has(TokenType.T_IF)) {
+            } else if (this.has(TokenType.T_IF)) {
                 alternate = this.parseStatement();
             } else {
                 throw new Error(`Unexpected token ${TokenType[this.frontType()]} in else statement`);
             }
         }
+
         return new AstIfStatement(test, consequent, alternate);
     }
 
@@ -1472,8 +1454,8 @@ class Parser {
     }
     
     parseBinaryExpression(_lhs: Ast, min_bp: number): Ast {
-        console.log("parseBinaryExpression: looking for right side of binary expression", min_bp);
         let lhs: Ast = _lhs;
+
         let operator: Token | null = this.expectOneOf([
             TokenType.T_OPERATOR_ADD,
             TokenType.T_OPERATOR_SUBTRACT,
@@ -1495,6 +1477,7 @@ class Parser {
         if (operator === null) {
             throw new Error(`Unexpected token ${TokenType[this.frontType()]}`);
         }
+
         this.skipWhitespace();
 
         let rhs: Ast = this.parseExpression(min_bp);
@@ -1565,7 +1548,6 @@ class Parser {
     }
 
     parseExpression(binding_power_to_my_right: number = 0): Ast {
-        console.log("parseExpression:", this.front());
         let result: Ast | null = null;
 
         const ft = this.frontType();
@@ -1583,8 +1565,7 @@ class Parser {
 
         this.skipWhitespace();
 
-        while(binding_power_to_my_right < this.bp_lookup(this.frontType()).left_power) {
-            console.log("In while:", this.front());
+        while (binding_power_to_my_right < this.bp_lookup(this.frontType()).left_power) {
             // Is it a postfix expression?
             if (this.has(TokenType.T_OPERATOR_BANG)) {
                 result = this.parsePostfixExpression(result);
@@ -1602,7 +1583,6 @@ class Parser {
                 result = new AstCallExpression(result, args);
             } else {
                 // It must be a binary expression
-                console.log(`Adding ${TokenType[this.frontType()]} to ${result.kind}`);
                 result = this.parseBinaryExpression(result, this.bp_lookup(this.frontType()).right_power);
             }
             this.skipWhitespace(); // Maybe we need to skip whitespace inside the loop
@@ -1644,10 +1624,8 @@ class Parser {
         } else if (ft === TokenType.T_ECHO) {
             return this.parseEcho();
         } else if (this.is_value(ft)) {
-            console.log("Going to run parseExpression");
             let expr: Ast = this.parseExpression();
 
-            // T_OPERATOR_ASSIGN_MULTIPLY
             const ft = this.frontType();
             if (this.skipOneOf([
                 TokenType.T_OPERATOR_ASSIGN,
