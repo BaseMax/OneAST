@@ -1131,6 +1131,10 @@ class Interpreter {
         return code;
     }
 
+    interpretEmptyStatement(statement: AstEmptyStatement): string {
+        return ";";
+    }
+
     interpretStatement(statement: AstStatement): string {
         console.log("Stmt:", statement.kind, statement);
 
@@ -1148,7 +1152,7 @@ class Interpreter {
                 return this.interpretCallExpression(statement as AstCallExpression);
                 break;
             case "BlockStatement":
-                // return this.interpretBlockStatement(statement);
+                return this.interpretBlockStatement(statement as AstBlock);
                 break;
             case "IfStatement":
                 return this.interpretIfStatement(statement as AstIfStatement);
@@ -1157,7 +1161,7 @@ class Interpreter {
                 return this.interpretWhileStatement(statement as AstWhileStatement);
                 break;
             case "EmptyStatement":
-                // return this.interpretEmptyStatement(statement);
+                return this.interpretEmptyStatement(statement);
                 break;
             default:
                 throw new Error("Unknown statement kind: " + statement.kind);
@@ -1169,7 +1173,7 @@ class Interpreter {
         let code = "";
 
         code += "while (" + this.interpretExpression(statement.condition) + ") ";
-        code += this.interpretBlock(statement.body as AstBlock);
+        code += this.interpretBlockStatement(statement.body as AstBlock);
 
         return code;
     }
@@ -1180,7 +1184,7 @@ class Interpreter {
         const test: string = this.interpretExpression(statement.test);
 
         code += "if (" + test + ") ";
-        code += this.interpretBlock(statement.consequent as AstBlock);
+        code += this.interpretBlockStatement(statement.consequent as AstBlock);
 
         if (statement.alternate) {
             code += " else ";
@@ -1196,7 +1200,7 @@ class Interpreter {
         return code;
     }
 
-    interpretBlock(block: AstBlock): string {
+    interpretBlockStatement(block: AstBlock): string {
         let code = "";
 
         code += "{";
@@ -1207,7 +1211,6 @@ class Interpreter {
 
         return code;
     }
-
 }
 
 class Parser {
@@ -1259,10 +1262,8 @@ class Parser {
             this.skipWhitespace();
             this.expect(TokenType.T_PARENTHESIS_CLOSE);
         }
-
-        return new AstEchoStatement(
-            exprs
-        );
+        
+        return new AstEchoStatement(exprs);
     }
 
     parseExpressionLiteral(): Ast {
