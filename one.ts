@@ -118,8 +118,8 @@ enum TokenType {
     T_OPERATOR_BIT_LEFT_SHIFT,
     T_OPERATOR_BIT_RIGHT_SHIFT,
 
-    T_OPERATOR_INCREASEMENT = 34,
-    T_OPERATOR_DECREASEMENT = 35,
+    T_OPERATOR_INCREASEMENT,
+    T_OPERATOR_DECREASEMENT,
 
     T_INLINE_COMMENT,
     T_BLOCK_COMMENT,
@@ -681,11 +681,11 @@ class AstExpression implements Ast {
 
 class AstAssignmentExpression implements Ast {
     kind: string = "AssignmentExpression";
-    operator: string;
+    operator: TokenType;
     left: Ast;
     right: Ast;
 
-    constructor(operator: string, left: Ast, right: Ast) {
+    constructor(operator: TokenType, left: Ast, right: Ast) {
         this.operator = operator;
         this.left = left;
         this.right = right;
@@ -1005,12 +1005,26 @@ class Interpreter {
         return code;
     }
 
+    interpretAssignmentExpression(statement: AstAssignmentExpression): string {
+        let code = "";
+
+        code += this.interpretExpression(statement.left);
+        code += " = ";
+        code += this.interpretExpression(statement.right);
+        code += ";\n";
+
+        return code;
+    }
+
     interpretStatement(statement: AstStatement): string {
         console.log("Stmt:", statement.kind, statement);
 
         switch (statement.kind) {
             case "ExpressionStatement":
                 return this.interpretExpressionStatement(statement as AstExpressionStatement);
+                break;
+            case "AssignmentExpression":
+                return this.interpretAssignmentExpression(statement as AstAssignmentExpression);
                 break;
             case "CallExpression":
                 return this.interpretCallExpression(statement as AstCallExpression);
@@ -1036,9 +1050,9 @@ class Interpreter {
     interpretWhileStatement(statement: AstWhileStatement): string {
         let code = "";
 
-        code += "while (" + this.interpretExpression(statement.condition) + ") {\n";
-        code += this.interpretStatement(statement.body);
-        code += "}\n";
+        code += "while (" + this.interpretExpression(statement.condition) + ") ";
+        code += this.interpretBlock(statement.body as AstBlock);
+
         return code;
     }
 
@@ -1533,19 +1547,18 @@ class Parser {
             console.log("Going to run parseExpression");
             let expr: Ast = this.parseExpression();
 
-            // if (this.skip(TokenType.T_PARENTHESIS_OPEN)) {
-            //     this.skipWhitespace();
+            if (this.skip(TokenType.T_OPERATOR_ASSIGN)) {
+                this.skipWhitespace();
+                const value: Ast = this.parseExpression();
 
-            //     const args: Array<Ast> = this.parseExpressions();
-
-            //     this.expect(TokenType.T_PARENTHESIS_CLOSE);
-
-            //     expr = new AstCallExpression(expr, args);
-            // }
-            return new AstExpressionStatement(expr);
+                return new AstAssignmentExpression(TokenType.T_OPERATOR_ASSIGN, expr, value);
+            } else {
+                return new AstExpressionStatement(expr);
+            }
         } else {
             throw new Error(`Unexpected token ${TokenType[ft]}`);
         }
+        return null;
     }
 
     frontType(): TokenType {
@@ -1624,9 +1637,15 @@ function main(): void
     } else {
         echo false;
     }
+    i = 1;
+    # i += 1;
+    # i -= 1;
+    i = x * (y - 1);
     while (i <= 5) {
         echo i;
+        i = i + 1;
     }
+    i = i + 1;
     `;
     input.setData(source_code);
     console.log(input);
