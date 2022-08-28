@@ -736,6 +736,17 @@ class AstUnaryExpression implements Ast {
     }
 }
 
+class AstWhileStatement implements Ast {
+    kind: string = "WhileStatement";
+    condition: Ast;
+    body: Ast;
+
+    constructor(condition: Ast, body: Ast) {
+        this.condition= condition;
+        this.body = body;
+    }
+}
+
 class AstIfStatement implements Ast {
     kind: string = "IfStatement";
     test: Ast;
@@ -1010,6 +1021,9 @@ class Interpreter {
             case "IfStatement":
                 return this.interpretIfStatement(statement as AstIfStatement);
                 break;
+            case "WhileStatement":
+                return this.interpretWhileStatement(statement as AstWhileStatement);
+                break;
             case "EmptyStatement":
                 // return this.interpretEmptyStatement(statement);
                 break;
@@ -1017,6 +1031,15 @@ class Interpreter {
                 throw new Error("Unknown statement kind: " + statement.kind);
         }
         return "";
+    }
+
+    interpretWhileStatement(statement: AstWhileStatement): string {
+        let code = "";
+
+        code += "while (" + this.interpretExpression(statement.condition) + ") {\n";
+        code += this.interpretStatement(statement.body);
+        code += "}\n";
+        return code;
     }
 
     interpretIfStatement(statement: AstIfStatement): string {
@@ -1175,6 +1198,24 @@ class Parser {
             if (ast !== null) statements.push(ast);
         }
         return new AstBlock(statements);
+    }
+
+    parseWhile(): Ast {
+        this.expect(TokenType.T_WHILE);
+        this.skipWhitespace();
+
+        this.expect(TokenType.T_PARENTHESIS_OPEN);
+        this.skipWhitespace();
+
+        let test: any = this.parseExpression();
+        this.skipWhitespace();
+
+        this.expect(TokenType.T_PARENTHESIS_CLOSE);
+        this.skipWhitespace();
+
+        let block: Ast = this.parseBlock();
+
+        return new AstWhileStatement(test, block);
     }
 
     parseIf(): Ast {
@@ -1484,6 +1525,8 @@ class Parser {
             return null;
         } else if (ft === TokenType.T_IF) {
             return this.parseIf();
+        } else if (ft === TokenType.T_WHILE) {
+            return this.parseWhile();
         } else if (ft === TokenType.T_ECHO) {
             return this.parseEcho();
         } else if (this.is_value(ft)) {
@@ -1580,6 +1623,9 @@ function main(): void
         echo true;
     } else {
         echo false;
+    }
+    while (i <= 5) {
+        echo i;
     }
     `;
     input.setData(source_code);
